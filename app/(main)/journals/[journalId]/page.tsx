@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Plus, Calendar, MapPin, ChevronLeft } from "lucide-react"
+import { Plus, Calendar, MapPin, ChevronLeft, ImageIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
 
 export default async function JournalDetailsPage({ params }: { params: Promise<{ journalId: string }> }) {
     const session = await auth()
@@ -84,10 +85,22 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-sm text-muted-foreground line-clamp-3">
-                                            {/* Ideally we extract text from JSON content here, but for now simple fallback */}
-                                            Click to read more...
-                                        </p>
+                                        <div className="flex gap-4">
+                                            <div className="flex-1 space-y-2">
+                                                <p className="text-sm text-muted-foreground line-clamp-3">
+                                                    {getContentSnippet(entry.content)}
+                                                </p>
+                                            </div>
+                                            {getFirstImage(entry.content) && (
+                                                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md border bg-muted">
+                                                    <img
+                                                        src={getFirstImage(entry.content)!}
+                                                        alt={entry.title}
+                                                        className="h-full w-full object-cover transition-transform hover:scale-105"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>

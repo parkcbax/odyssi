@@ -79,6 +79,7 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
     const [tags, setTags] = useState<string>(initialData?.tags ? initialData.tags.join(', ') : '')
 
     const [isSaving, setIsSaving] = useState(false)
+    const [isUploading, setIsUploading] = useState(false)
 
     const editor = useEditor({
         immediatelyRender: false,
@@ -148,6 +149,54 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
             alert("Failed to save")
             setIsSaving(false)
         }
+    }
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file || !editor) return
+
+        setIsUploading(true)
+        const formData = new FormData()
+        formData.append("file", file)
+
+        try {
+            const response = await fetch("/api/upload", {
+                method: "POST",
+                body: formData,
+            })
+
+            const data = await response.json()
+            if (data.url) {
+                editor.chain().focus().setImage({ src: data.url }).run()
+            } else {
+                alert("Upload failed")
+            }
+        } catch (error) {
+            console.error("Upload error:", error)
+            alert("Upload failed")
+        } finally {
+            setIsUploading(false)
+            // Reset input
+            e.target.value = ""
+        }
+    }
+
+    const setLink = () => {
+        if (!editor) return
+        const previousUrl = editor.getAttributes("link").href
+        const url = window.prompt("URL", previousUrl)
+
+        // cancelled
+        if (url === null) return
+
+        // empty
+        if (url === "") {
+            editor.chain().focus().extendMarkRange("link").unsetLink().run()
+            return
+        }
+
+        // update link
+        editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
     }
 
     const MOODS = ["😊", "😢", "😡", "😴", "🤔", "🎉", "🔥", "❤️", "✨", "🌧️"]
@@ -232,9 +281,26 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleBlockquote().run()} isActive={editor?.isActive('blockquote')}><Quote className="h-4 w-4" /></ToolbarButton>
                         <div className="w-px h-6 bg-border mx-1" />
 
-                        {/* Placeholder Tools */}
-                        <ToolbarButton onClick={() => { }}><ImageIcon className="h-4 w-4" /></ToolbarButton>
-                        <ToolbarButton onClick={() => { }}><LinkIcon className="h-4 w-4" /></ToolbarButton>
+                        {/* Media & Link Tools */}
+                        <ToolbarButton
+                            onClick={() => document.getElementById('image-upload')?.click()}
+                            disabled={isUploading}
+                        >
+                            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                            <input
+                                id="image-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleImageUpload}
+                            />
+                        </ToolbarButton>
+                        <ToolbarButton
+                            onClick={setLink}
+                            isActive={editor?.isActive('link')}
+                        >
+                            <LinkIcon className="h-4 w-4" />
+                        </ToolbarButton>
 
                         <div className="w-px h-6 bg-border mx-1" />
 
