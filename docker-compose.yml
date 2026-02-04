@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: odyssi-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://odyssi:odyssi_password@postgres:5434/odyssi_db
+      NEXTAUTH_SECRET: supersecretchangeinprod
+      NEXTAUTH_URL: http://localhost:3000
+    depends_on:
+      - postgres
+    networks:
+      - odyssi-network
+
+  postgres:
+    container_name: odyssi-postgres
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: odyssi
+      POSTGRES_PASSWORD: odyssi_password
+      POSTGRES_DB: odyssi_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - odyssi-network
+
+volumes:
+  postgres_data:
+
+
+networks:
+  odyssi-network:
+    driver: bridge

@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  timezone      String    @default("UTC")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  journals Journal[]
+  tags     Tag[]
+}
+
+model Journal {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  color       String   @default("#4F46E5") // Default to Indigo
+  icon        String?  // Emoji or icon name
+  coverImage  String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries     Entry[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Entry {
+  id           String   @id @default(cuid())
+  title        String
+  content      Json? // Tiptap JSON content
+  date         DateTime // The date of the entry (user selected)
+  locationLat  Float?
+  locationLng  Float?
+  locationName String?
+  mood         String? // Emoji or mood name
+
+  journalId String
+  journal   Journal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+
+  images Asset[]
+  tags   Tag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  url       String
+  type      String   @default("image")
+  entryId   String
+  entry     Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Tag {
+  id      String  @id @default(cuid())
+  name    String
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries Entry[]
+
+  @@unique([name, userId])
+}
