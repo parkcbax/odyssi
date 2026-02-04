@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sparkles } from "lucide-react"
+import Link from "next/link"
 
 export function PromptCard() {
     return (
@@ -18,8 +19,10 @@ export function PromptCard() {
                 </CardDescription>
             </CardHeader>
             <CardFooter>
-                <Button className="w-full sm:w-auto font-medium">
-                    Reflect Now
+                <Button className="w-full sm:w-auto font-medium" asChild>
+                    <Link href="/entries/new">
+                        Reflect Now
+                    </Link>
                 </Button>
             </CardFooter>
         </Card>
