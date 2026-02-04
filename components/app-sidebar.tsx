@@ -65,7 +65,7 @@ export function AppSidebar({ enableBlogging }: AppSidebarProps) {
     if (enableBlogging) {
         navItems.push({
             title: "Blog",
-            url: "/blog",
+            url: "/dashboard/blog",
             icon: Book, // You might want a different icon for Blog
         })
     }

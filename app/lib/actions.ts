@@ -436,6 +436,8 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
 
 const CreateBlogPostSchema = z.object({
     title: z.string().min(1, "Title is required"),
+    slug: z.string().optional(),
+    category: z.string().optional(),
     content: z.string().optional(),
     published: z.string().optional(),
 })
@@ -446,6 +448,8 @@ export async function createBlogPost(prevState: any, formData: FormData) {
 
     const validatedFields = CreateBlogPostSchema.safeParse({
         title: formData.get("title"),
+        slug: formData.get("slug"),
+        category: formData.get("category"),
         content: formData.get("content"),
         published: formData.get("published"),
     })
@@ -454,9 +458,13 @@ export async function createBlogPost(prevState: any, formData: FormData) {
         return { message: "Invalid fields" }
     }
 
-    const { title, content, published } = validatedFields.data
-    // eslint-disable-next-line
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now()
+    const { title, content, published, category } = validatedFields.data
+
+    // Use provided slug or generate one
+    let slug = validatedFields.data.slug
+    if (!slug || slug.trim() === "") {
+        slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now()
+    }
 
     // Content comes as JSON string from Tiptap, parse it so Prisma stores it as JSON object
     let contentJson = null
@@ -473,8 +481,9 @@ export async function createBlogPost(prevState: any, formData: FormData) {
         await prisma.blogPost.create({
             data: {
                 title,
-                content: contentJson,
                 slug,
+                category,
+                content: contentJson,
                 published: published === "on",
                 authorId: session.user.id
             }
@@ -483,6 +492,77 @@ export async function createBlogPost(prevState: any, formData: FormData) {
         console.error("Failed to create blog post:", error)
         return { message: "Database Error" }
     }
+    redirect("/dashboard/blog")
+}
 
-    redirect("/blog")
+const UpdateBlogPostSchema = z.object({
+    id: z.string(),
+    title: z.string().min(1, "Title is required"),
+    slug: z.string().optional(),
+    category: z.string().optional(),
+    content: z.string().optional(),
+    published: z.string().optional(),
+})
+
+export async function updateBlogPost(prevState: any, formData: FormData) {
+    const session = await auth()
+    if (!session?.user?.id) return { message: "Unauthorized" }
+
+    const validatedFields = UpdateBlogPostSchema.safeParse({
+        id: formData.get("id"),
+        title: formData.get("title"),
+        slug: formData.get("slug"),
+        category: formData.get("category"),
+        content: formData.get("content"),
+        published: formData.get("published"),
+    })
+
+    if (!validatedFields.success) {
+        return { message: "Invalid fields" }
+    }
+
+    const { id, title, content, published, slug, category } = validatedFields.data
+
+    let contentJson = null
+    if (content) {
+        try {
+            contentJson = JSON.parse(content)
+        } catch (e) {
+            contentJson = { type: "markdown", text: content }
+        }
+    }
+
+    try {
+        await prisma.blogPost.update({
+            where: { id, authorId: session.user.id },
+            data: {
+                title,
+                slug: slug && slug.trim() !== "" ? slug : undefined, // Only update slug if provided
+                category,
+                content: contentJson,
+                published: published === "on",
+            }
+        })
+    } catch (error) {
+        console.error("Failed to update blog post:", error)
+        return { message: "Database Error" }
+    }
+
+    redirect("/dashboard/blog")
+}
+
+export async function deleteBlogPost(id: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { message: "Unauthorized" }
+
+    try {
+        await prisma.blogPost.delete({
+            where: { id, authorId: session.user.id }
+        })
+        revalidatePath("/dashboard/blog")
+        return { message: "Success" }
+    } catch (error) {
+        console.error("Failed to delete blog post:", error)
+        return { message: "Database Error" }
+    }
 }

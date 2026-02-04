@@ -29,12 +29,19 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
-import { createBlogPost } from '@/app/lib/actions'
+import { createBlogPost, updateBlogPost } from '@/app/lib/actions'
+// ... (imports remain)
+
+// ...
+
+
 
 interface BlogEditorProps {
     initialData?: {
         id?: string
         title: string
+        slug?: string
+        category?: string
         content: any
         published: boolean
     }
@@ -44,6 +51,8 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
     const router = useRouter()
 
     const [title, setTitle] = useState(initialData?.title || '')
+    const [slug, setSlug] = useState(initialData?.slug || '')
+    const [category, setCategory] = useState(initialData?.category || '')
     const [published, setPublished] = useState(initialData?.published || false)
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
@@ -90,13 +99,14 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
 
         const formData = new FormData()
         formData.append('title', title)
+        formData.append('slug', slug)
+        formData.append('category', category)
         formData.append('content', JSON.stringify(content)) // Send JSON string
         formData.append('published', published ? "on" : "off")
 
         if (initialData?.id) {
-            // Update logic would go here
-            // formData.append('id', initialData.id)
-            // await updateBlogPost(null, formData)
+            formData.append('id', initialData.id)
+            await updateBlogPost(null, formData)
         } else {
             await createBlogPost(null, formData)
         }
@@ -204,6 +214,31 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                         <div className="flex items-center space-x-2 shrink-0">
                             <Switch id="published" checked={published} onCheckedChange={setPublished} />
                             <Label htmlFor="published">Publish</Label>
+                        </div>
+                    </div>
+                    {/* Metadata Inputs */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label htmlFor="slug" className="text-xs text-muted-foreground">URL Slug</Label>
+                            <input
+                                id="slug"
+                                type="text"
+                                placeholder="my-awesome-post"
+                                className="w-full text-sm bg-muted/50 border rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                                value={slug}
+                                onChange={(e) => setSlug(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="category" className="text-xs text-muted-foreground">Category</Label>
+                            <input
+                                id="category"
+                                type="text"
+                                placeholder="Technology, Life, etc."
+                                className="w-full text-sm bg-muted/50 border rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value)}
+                            />
                         </div>
                     </div>
                 </div>

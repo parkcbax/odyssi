@@ -83,6 +83,7 @@ model BlogPost {
   id        String   @id @default(cuid())
   title     String
   slug      String   @unique
+  category  String?
   content   Json?
   published Boolean  @default(false)
   
