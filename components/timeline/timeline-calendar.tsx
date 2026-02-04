@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { format, isSameDay, startOfDay } from "date-fns"
 import Link from "next/link"
 import { MessageSquare } from "lucide-react"
+import { getFirstImage } from "@/lib/editor-utils"
 
 interface TimelineCalendarProps {
     entries: any[]
@@ -61,17 +62,28 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
                                         {entry.mood && (
                                             <span className="text-xl shrink-0 mt-0.5">{entry.mood}</span>
                                         )}
-                                        <div className="min-w-0">
-                                            <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-                                                {entry.title}
-                                            </h4>
-                                            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                                                <div
-                                                    className="w-1.5 h-1.5 rounded-full"
-                                                    style={{ backgroundColor: entry.journal.color }}
-                                                />
-                                                {entry.journal.title}
+                                        <div className="flex flex-1 items-start justify-between gap-3 min-w-0">
+                                            <div className="min-w-0">
+                                                <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                                                    {entry.title}
+                                                </h4>
+                                                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                                                    <div
+                                                        className="w-1.5 h-1.5 rounded-full"
+                                                        style={{ backgroundColor: entry.journal.color }}
+                                                    />
+                                                    {entry.journal.title}
+                                                </div>
                                             </div>
+                                            {getFirstImage(entry.content) && (
+                                                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border bg-muted">
+                                                    <img
+                                                        src={getFirstImage(entry.content)!}
+                                                        alt={entry.title}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </CardContent>
                                 </Card>

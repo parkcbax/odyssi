@@ -4,6 +4,7 @@ import { format } from "date-fns"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
 
 interface TimelineListProps {
     entries: any[]
@@ -51,8 +52,8 @@ export function TimelineList({ entries }: TimelineListProps) {
                                 <Link href={`/entries/${entry.id}`}>
                                     <Card className="hover:shadow-md transition-all group-hover:ring-1 ring-primary/20">
                                         <CardContent className="p-4">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="space-y-1">
+                                            <div className="flex gap-4">
+                                                <div className="flex-1 space-y-1">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-medium text-muted-foreground">
                                                             {format(entry.date, 'EEE, MMM d')}
@@ -65,9 +66,18 @@ export function TimelineList({ entries }: TimelineListProps) {
                                                         {entry.title}
                                                     </h3>
                                                 </div>
+                                                {getFirstImage(entry.content) && (
+                                                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-muted">
+                                                        <img
+                                                            src={getFirstImage(entry.content)!}
+                                                            alt={entry.title}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    </div>
+                                                )}
                                                 <Badge
                                                     variant="outline"
-                                                    className="shrink-0"
+                                                    className="shrink-0 h-fit"
                                                     style={{
                                                         borderColor: entry.journal.color,
                                                         color: entry.journal.color
@@ -104,19 +114,3 @@ export function TimelineList({ entries }: TimelineListProps) {
     )
 }
 
-function getContentSnippet(content: any): string {
-    if (!content) return ""
-    try {
-        // Tiptap JSON content extraction
-        const doc = typeof content === 'string' ? JSON.parse(content) : content
-        let text = ""
-        const traverse = (node: any) => {
-            if (node.type === 'text') text += node.text
-            if (node.content) node.content.forEach(traverse)
-        }
-        traverse(doc)
-        return text
-    } catch (e) {
-        return ""
-    }
-}
