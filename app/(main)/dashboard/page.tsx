@@ -9,6 +9,11 @@ export default async function DashboardPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
 
+    const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true }
+    })
+
     // Fetch Recent Entries (latest 5)
     const recentEntries = await prisma.entry.findMany({
         where: {
@@ -47,7 +52,7 @@ export default async function DashboardPage() {
         <div className="max-w-5xl mx-auto space-y-8">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                <p className="text-muted-foreground">Welcome back, {session.user.name || "Traveler"}.</p>
+                <p className="text-muted-foreground">Welcome back, {user?.name || "Traveler"}.</p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-1">

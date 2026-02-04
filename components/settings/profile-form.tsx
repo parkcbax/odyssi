@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 
 interface ProfileFormProps {
     user: {
@@ -22,13 +24,30 @@ export function ProfileForm({ user }: ProfileFormProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [pwdState, pwdDispatch] = useActionState(updatePassword, {} as any)
 
+    const router = useRouter()
+    const { update: updateSession } = useSession()
+
     useEffect(() => {
         if (state?.message === "Success") {
             toast.success("Profile updated successfully")
+
+            // Extract values from form if possible or just trigger update
+            // Since we don't have the values here directly unless we use state for inputs,
+            // we'll just trigger a session update which will re-fetch or use defaults.
+            // Better: update session with the new name if we want immediate UI update.
+            const nameInput = document.getElementById('name') as HTMLInputElement
+            const emailInput = document.getElementById('email') as HTMLInputElement
+
+            updateSession({
+                name: nameInput?.value,
+                email: emailInput?.value
+            })
+
+            router.refresh()
         } else if (state?.message && state.message !== "Success") {
             toast.error(state.message)
         }
-    }, [state])
+    }, [state, router, updateSession])
 
     useEffect(() => {
         if (pwdState?.message === "Success") {
