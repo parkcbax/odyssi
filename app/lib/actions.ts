@@ -79,6 +79,70 @@ export async function createJournal(
     return { message: "Success" }
 }
 
+const UpdateJournalSchema = z.object({
+    id: z.string(),
+    title: z.string().min(1, { message: "Title is required" }).max(100),
+    description: z.string().max(500).optional(),
+    color: z.string().optional(),
+    icon: z.string().optional(),
+})
+
+export async function updateJournal(
+    prevState: any,
+    formData: FormData
+) {
+    const session = await auth()
+    if (!session?.user?.id) return { message: "Unauthorized" }
+
+    const validatedFields = UpdateJournalSchema.safeParse({
+        id: formData.get("id"),
+        title: formData.get("title"),
+        description: formData.get("description"),
+        color: formData.get("color"),
+        icon: formData.get("icon"),
+    })
+
+    if (!validatedFields.success) {
+        return {
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Missing Fields. Failed to Update Journal.",
+        }
+    }
+
+    const { id, title, description, color, icon } = validatedFields.data
+
+    try {
+        await prisma.journal.update({
+            where: { id, userId: session.user.id },
+            data: { title, description, color, icon }
+        })
+    } catch (error) {
+        console.error("Failed to update journal:", error);
+        return { message: "Database Error" }
+    }
+
+    revalidatePath("/journals")
+    revalidatePath(`/journals/${id}`)
+    return { message: "Success" }
+}
+
+export async function deleteJournal(id: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { message: "Unauthorized" }
+
+    try {
+        await prisma.journal.delete({
+            where: { id, userId: session.user.id }
+        })
+    } catch (error) {
+        console.error("Failed to delete journal:", error);
+        return { message: "Database Error" }
+    }
+
+    revalidatePath("/journals")
+    return { message: "Success" }
+}
+
 const CreateEntrySchema = z.object({
     title: z.string().min(1, "Title is required"),
     content: z.string().nullish(),
@@ -211,4 +275,29 @@ export async function updateEntry(
     revalidatePath(`/entries/${id}`)
     revalidatePath(`/journals/${journalId}`)
     return { message: "Success" }
+}
+
+export async function deleteEntry(id: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { message: "Unauthorized" }
+
+    try {
+        const entry = await prisma.entry.findUnique({
+            where: { id },
+            select: { journalId: true, journal: { select: { userId: true } } }
+        })
+
+        if (!entry || entry.journal.userId !== session.user.id) {
+            return { message: "Unauthorized" }
+        }
+
+        await prisma.entry.delete({ where: { id } })
+
+        revalidatePath("/dashboard")
+        revalidatePath(`/journals/${entry.journalId}`)
+        return { message: "Success" }
+    } catch (error) {
+        console.error("Failed to delete entry:", error);
+        return { message: "Database Error" }
+    }
 }

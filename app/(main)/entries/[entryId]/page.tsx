@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Calendar, MapPin, Tag, Edit } from "lucide-react"
 import { EntryViewer } from "@/components/entry-viewer"
+import { EntryActions } from "@/components/entry-actions"
 
 export default async function EntryPage({ params }: { params: Promise<{ entryId: string }> }) {
     const session = await auth()
@@ -40,13 +41,11 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
                         </Link>
                     </Button>
                     <div className="flex items-center gap-2">
-                        {/* Future: Edit button */}
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={`/entries/${entry.id}/edit`}>
-                                <Edit className="h-3 w-3 mr-2" />
-                                Edit
-                            </Link>
-                        </Button>
+                        <EntryActions
+                            entryId={entry.id}
+                            journalId={entry.journalId}
+                            title={entry.title}
+                        />
                     </div>
                 </div>
 

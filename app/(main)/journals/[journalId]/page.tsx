@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Plus, Calendar, MapPin, ChevronLeft, ImageIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
+import { JournalActions } from "@/components/journal-actions"
 
 export default async function JournalDetailsPage({ params }: { params: Promise<{ journalId: string }> }) {
     const session = await auth()
@@ -43,21 +44,30 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                     <div className="flex items-center gap-4">
                         <div
                             className="flex h-16 w-16 items-center justify-center rounded-2xl text-3xl shadow-sm border"
-                            style={{ backgroundColor: journal.color + '20', color: journal.color }} // 20 for opacity
+                            style={{ backgroundColor: (journal as any).color + '20', color: (journal as any).color }} // 20 for opacity
                         >
-                            {journal.icon || "📔"}
+                            {(journal as any).icon || "📔"}
                         </div>
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight">{journal.title}</h1>
                             <p className="text-muted-foreground">{journal.description || "No description provided."}</p>
                         </div>
                     </div>
-                    <Button asChild>
-                        <Link href="/entries/new">
-                            <Plus className="h-4 w-4 mr-2" />
-                            New Entry
-                        </Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <JournalActions journal={{
+                            id: journal.id,
+                            title: journal.title,
+                            description: journal.description,
+                            color: (journal as any).color,
+                            icon: (journal as any).icon
+                        }} />
+                        <Button asChild>
+                            <Link href="/entries/new">
+                                <Plus className="h-4 w-4 mr-2" />
+                                New Entry
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             </div>
 

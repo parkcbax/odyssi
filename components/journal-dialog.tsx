@@ -13,17 +13,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus } from "lucide-react"
-import { createJournal } from "@/app/lib/actions"
-// Using useActionState for Next.js 16 / React 19
+import { Plus, Edit2, Settings } from "lucide-react"
+import { createJournal, updateJournal } from "@/app/lib/actions"
 import { useActionState, useState, useEffect } from "react"
 import { useFormStatus } from "react-dom"
-
-// I need to install a few more things if I want a date picker or something special, but for color/icon I can use simple UI for now.
 import { cn } from "@/lib/utils"
-// import emoji data if needed, or just a simple list for now to keep it minimal as per "minimalist" goal. 
-// Or better: Use native emoji picker or a simple list of select emojis.
-// For now, I'll use a curated list of emojis to match the screenshot vibe.
 
 const COLORS = [
     "#4F46E5", // Indigo (Default)
@@ -44,45 +38,62 @@ const ICONS = [
     "🌷", "🔥", "⚡", "💫", "🌙", "☀️"
 ]
 
-export function CreateJournalDialog() {
+interface JournalDialogProps {
+    mode?: "create" | "edit"
+    journal?: {
+        id: string
+        title: string
+        description: string | null
+        color: string
+        icon: string | null
+    }
+    trigger?: React.ReactNode
+}
+
+export function JournalDialog({ mode = "create", journal, trigger }: JournalDialogProps) {
     const [open, setOpen] = useState(false)
+    const action = mode === "create" ? createJournal : updateJournal
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [state, dispatch] = useActionState(createJournal, {} as any)
-    const [title, setTitle] = useState("")
-    const [description, setDescription] = useState("")
-    const [selectedColor, setSelectedColor] = useState(COLORS[0])
-    const [selectedIcon, setSelectedIcon] = useState("")
+    const [state, dispatch] = useActionState(action, {} as any)
+
+    const [title, setTitle] = useState(journal?.title || "")
+    const [description, setDescription] = useState(journal?.description || "")
+    const [selectedColor, setSelectedColor] = useState(journal?.color || COLORS[0])
+    const [selectedIcon, setSelectedIcon] = useState(journal?.icon || "")
 
     useEffect(() => {
         if (state?.message === "Success") {
             setOpen(false)
-            // Reset form
-            setTitle("")
-            setDescription("")
-            setSelectedColor(COLORS[0])
-            setSelectedIcon("")
+            if (mode === "create") {
+                // Reset form only on create
+                setTitle("")
+                setDescription("")
+                setSelectedColor(COLORS[0])
+                setSelectedIcon("")
+            }
         }
-    }, [state])
+    }, [state, mode])
+
+    const isEdit = mode === "edit"
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Journal
-                </Button>
+                {trigger || (
+                    <Button size="sm" className="gap-2">
+                        {isEdit ? <Settings className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                        {isEdit ? "Edit Journal" : "New Journal"}
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 -ml-2" onClick={() => setOpen(false)}>
-                            <span className="sr-only">Close</span>
-                            <span aria-hidden="true" className="text-lg">←</span>
-                        </Button>
-                        <DialogTitle>Create Journal</DialogTitle>
+                        <DialogTitle>{isEdit ? "Edit Journal" : "Create Journal"}</DialogTitle>
                     </div>
                 </DialogHeader>
                 <form action={dispatch}>
+                    {isEdit && <input type="hidden" name="id" value={journal?.id} />}
                     <input type="hidden" name="color" value={selectedColor} />
                     <input type="hidden" name="icon" value={selectedIcon} />
 
@@ -176,9 +187,7 @@ export function CreateJournalDialog() {
                         {state?.message && state.message !== "Success" && (
                             <p className="mr-auto text-sm text-red-500 self-center">{state.message}</p>
                         )}
-                        <Button type="submit" disabled={!title} className="w-full">
-                            Create Journal
-                        </Button>
+                        <SubmitButton isEdit={isEdit} disabled={!title} />
                     </DialogFooter>
                 </form>
             </DialogContent>
@@ -186,11 +195,11 @@ export function CreateJournalDialog() {
     )
 }
 
-function SaveButton() {
+function SubmitButton({ isEdit, disabled }: { isEdit: boolean, disabled: boolean }) {
     const { pending } = useFormStatus()
     return (
-        <Button type="submit" disabled={pending}>
-            {pending ? "Creating..." : "Create Journal"}
+        <Button type="submit" disabled={pending || disabled} className="w-full">
+            {pending ? (isEdit ? "Saving..." : "Creating...") : (isEdit ? "Save Changes" : "Create Journal")}
         </Button>
     )
 }

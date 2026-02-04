@@ -1,6 +1,6 @@
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { CreateJournalDialog } from "@/components/create-journal-dialog"
+import { JournalDialog } from "@/components/journal-dialog"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -19,7 +19,7 @@ export default async function JournalsPage() {
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold tracking-tight">Journals</h1>
-                <CreateJournalDialog />
+                <JournalDialog />
             </div>
             {journals.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-xl border bg-muted/50 border-dashed text-muted-foreground p-8 text-center min-h-[300px]">
@@ -30,19 +30,31 @@ export default async function JournalsPage() {
                     <p className="text-sm text-muted-foreground mt-2 mb-4 max-w-sm">
                         Create your first journal to start documenting your journey.
                     </p>
-                    <CreateJournalDialog />
+                    <JournalDialog />
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {journals.map((journal) => (
                         <Link key={journal.id} href={`/journals/${journal.id}`}>
-                            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
-                                <CardHeader>
-                                    <CardTitle>{journal.title}</CardTitle>
-                                    <CardDescription className="line-clamp-2">{journal.description || "No description"}</CardDescription>
+                            <Card className="hover:bg-muted/50 transition-all cursor-pointer h-full group">
+                                <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+                                    <div
+                                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl shadow-sm border transition-transform group-hover:scale-110"
+                                        style={{ backgroundColor: (journal as any).color + '15', color: (journal as any).color }}
+                                    >
+                                        {(journal as any).icon || "📔"}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <CardTitle className="truncate">{journal.title}</CardTitle>
+                                        <CardDescription className="line-clamp-1">{journal.description || "No description"}</CardDescription>
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                        <span
+                                            className="h-2 w-2 rounded-full"
+                                            style={{ backgroundColor: (journal as any).color }}
+                                        />
                                         Last updated: {new Date(journal.updatedAt).toLocaleDateString()}
                                     </p>
                                 </CardContent>
