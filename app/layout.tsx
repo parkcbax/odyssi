@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Kanit, Prompt } from "next/font/google";
 import "./globals.css";
+import { FontLoader } from "@/components/font-loader";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -10,6 +12,18 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const kanit = Kanit({
+  variable: "--font-kanit",
+  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["latin", "thai"],
+});
+
+const prompt = Prompt({
+  variable: "--font-prompt",
+  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["latin", "thai"],
 });
 
 export const metadata: Metadata = {
@@ -25,11 +39,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${kanit.variable} ${prompt.variable}`}>
+      <body className="antialiased">
+        <FontLoader />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
