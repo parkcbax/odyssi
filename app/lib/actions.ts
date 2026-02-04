@@ -3,6 +3,7 @@
 import { signIn } from "@/auth"
 import { AuthError } from "next-auth"
 import { redirect } from "next/navigation"
+import { getExcerpt } from "@/app/lib/blog-utils"
 
 export async function authenticate(
     prevState: string | undefined,
@@ -22,6 +23,7 @@ export async function authenticate(
         throw error
     }
 }
+
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
@@ -439,6 +441,9 @@ const CreateBlogPostSchema = z.object({
     slug: z.string().optional(),
     category: z.string().optional(),
     content: z.string().optional(),
+    excerpt: z.string().optional(),
+    featuredImage: z.string().optional(),
+    keywords: z.string().optional(),
     published: z.string().optional(),
 })
 
@@ -451,6 +456,9 @@ export async function createBlogPost(prevState: any, formData: FormData) {
         slug: formData.get("slug"),
         category: formData.get("category"),
         content: formData.get("content"),
+        excerpt: formData.get("excerpt"),
+        featuredImage: formData.get("featuredImage"),
+        keywords: formData.get("keywords"),
         published: formData.get("published"),
     })
 
@@ -477,6 +485,12 @@ export async function createBlogPost(prevState: any, formData: FormData) {
         }
     }
 
+    // Auto-generate excerpt if not provided
+    let excerpt = validatedFields.data.excerpt
+    if (!excerpt || excerpt.trim() === "") {
+        excerpt = getExcerpt(contentJson)
+    }
+
     try {
         await prisma.blogPost.create({
             data: {
@@ -484,6 +498,9 @@ export async function createBlogPost(prevState: any, formData: FormData) {
                 slug,
                 category,
                 content: contentJson,
+                excerpt,
+                featuredImage: validatedFields.data.featuredImage,
+                keywords: validatedFields.data.keywords,
                 published: published === "on",
                 authorId: session.user.id
             }
@@ -501,6 +518,9 @@ const UpdateBlogPostSchema = z.object({
     slug: z.string().optional(),
     category: z.string().optional(),
     content: z.string().optional(),
+    excerpt: z.string().optional(),
+    featuredImage: z.string().optional(),
+    keywords: z.string().optional(),
     published: z.string().optional(),
 })
 
@@ -514,6 +534,9 @@ export async function updateBlogPost(prevState: any, formData: FormData) {
         slug: formData.get("slug"),
         category: formData.get("category"),
         content: formData.get("content"),
+        excerpt: formData.get("excerpt"),
+        featuredImage: formData.get("featuredImage"),
+        keywords: formData.get("keywords"),
         published: formData.get("published"),
     })
 
@@ -532,6 +555,12 @@ export async function updateBlogPost(prevState: any, formData: FormData) {
         }
     }
 
+    // Auto-generate excerpt if not provided
+    let excerpt = validatedFields.data.excerpt
+    if (!excerpt || excerpt.trim() === "") {
+        excerpt = getExcerpt(contentJson)
+    }
+
     try {
         await prisma.blogPost.update({
             where: { id, authorId: session.user.id },
@@ -540,6 +569,9 @@ export async function updateBlogPost(prevState: any, formData: FormData) {
                 slug: slug && slug.trim() !== "" ? slug : undefined, // Only update slug if provided
                 category,
                 content: contentJson,
+                excerpt,
+                featuredImage: validatedFields.data.featuredImage,
+                keywords: validatedFields.data.keywords,
                 published: published === "on",
             }
         })

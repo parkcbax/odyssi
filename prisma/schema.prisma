@@ -84,8 +84,11 @@ model BlogPost {
   title     String
   slug      String   @unique
   category  String?
-  content   Json?
-  published Boolean  @default(false)
+  content       Json?
+  excerpt       String?
+  featuredImage String?
+  keywords      String?  // Comma separated keywords
+  published     Boolean  @default(false)
   
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)

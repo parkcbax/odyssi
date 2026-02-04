@@ -43,6 +43,9 @@ interface BlogEditorProps {
         slug?: string
         category?: string
         content: any
+        excerpt?: string
+        featuredImage?: string
+        keywords?: string
         published: boolean
     }
 }
@@ -53,9 +56,13 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
     const [title, setTitle] = useState(initialData?.title || '')
     const [slug, setSlug] = useState(initialData?.slug || '')
     const [category, setCategory] = useState(initialData?.category || '')
+    const [excerpt, setExcerpt] = useState(initialData?.excerpt || '')
+    const [featuredImage, setFeaturedImage] = useState(initialData?.featuredImage || '')
+    const [keywords, setKeywords] = useState(initialData?.keywords || '')
     const [published, setPublished] = useState(initialData?.published || false)
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+    const [isUploadingFeatured, setIsUploadingFeatured] = useState(false)
 
     const editor = useEditor({
         immediatelyRender: false,
@@ -102,6 +109,9 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
         formData.append('slug', slug)
         formData.append('category', category)
         formData.append('content', JSON.stringify(content)) // Send JSON string
+        formData.append('excerpt', excerpt)
+        formData.append('featuredImage', featuredImage)
+        formData.append('keywords', keywords)
         formData.append('published', published ? "on" : "off")
 
         if (initialData?.id) {
@@ -243,6 +253,8 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                     </div>
                 </div>
 
+
+
                 <EditorContent editor={editor} />
             </div>
 
@@ -255,7 +267,98 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                     Save Post
                 </Button>
             </div>
-        </div>
+
+            {/* SEO Section */}
+            <div className="border-t pt-6 mt-2 space-y-4 mb-8">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                    Search Engine Optimization
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        {/* Featured Image */}
+                        <div className="space-y-2">
+                            <Label>Featured Image</Label>
+                            <div className="flex flex-col gap-3">
+                                {featuredImage && (
+                                    <div className="relative w-full aspect-video rounded overflow-hidden border">
+                                        <img src={featuredImage} alt="Featured" className="object-cover w-full h-full" />
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-8 w-8"
+                                            onClick={() => setFeaturedImage('')}
+                                        >
+                                            <span className="sr-only">Remove</span>
+                                            &times;
+                                        </Button>
+                                    </div>
+                                )}
+                                <div>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full"
+                                        disabled={isUploadingFeatured}
+                                        onClick={() => document.getElementById('featured-image-upload')?.click()}
+                                    >
+                                        {isUploadingFeatured ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ImageIcon className="h-4 w-4 mr-2" />}
+                                        {featuredImage ? 'Change Image' : 'Upload Featured Image'}
+                                    </Button>
+                                    <input
+                                        id="featured-image-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0]
+                                            if (!file) return
+                                            setIsUploadingFeatured(true)
+                                            const formData = new FormData()
+                                            formData.append("file", file)
+                                            try {
+                                                const response = await fetch("/api/upload", { method: "POST", body: formData })
+                                                const data = await response.json()
+                                                if (data.url) setFeaturedImage(data.url)
+                                            } catch (err) {
+                                                console.error(err)
+                                                alert("Upload failed")
+                                            } finally {
+                                                setIsUploadingFeatured(false)
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        {/* Keywords */}
+                        <div className="space-y-2">
+                            <Label htmlFor="keywords">Keywords</Label>
+                            <input
+                                id="keywords"
+                                type="text"
+                                placeholder="comma, separated, keywords"
+                                className="w-full text-sm bg-muted/50 border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
+                                value={keywords}
+                                onChange={(e) => setKeywords(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Excerpt */}
+                        <div className="space-y-2">
+                            <Label htmlFor="excerpt">Excerpt</Label>
+                            <textarea
+                                id="excerpt"
+                                placeholder="Short summary..."
+                                className="w-full min-h-[100px] text-sm bg-muted/50 border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                                value={excerpt}
+                                onChange={(e) => setExcerpt(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div >
     )
 }
 
