@@ -146,6 +146,26 @@ export async function POST(req: NextRequest) {
                         })
                     }
                 }
+
+                // Restore Blog Posts
+                // Delete existing first? "WIPE and REPLACE" strategy for EVERYTHING
+                await tx.blogPost.deleteMany({ where: { authorId: userId } }) // Wipe existing
+
+                if (data.blogPosts) {
+                    for (const post of data.blogPosts) {
+                        await tx.blogPost.create({
+                            data: {
+                                id: post.id,
+                                title: post.title,
+                                slug: post.slug,
+                                content: post.content,
+                                published: post.published,
+                                createdAt: post.createdAt,
+                                authorId: userId
+                            }
+                        })
+                    }
+                }
             })
 
         } else if (data.type === "JOURNAL") {

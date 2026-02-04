@@ -54,8 +54,21 @@ const items = [
 
 import { usePathname } from "next/navigation"
 
-export function AppSidebar() {
+interface AppSidebarProps {
+    enableBlogging?: boolean
+}
+
+export function AppSidebar({ enableBlogging }: AppSidebarProps) {
     const pathname = usePathname()
+
+    const navItems = [...items]
+    if (enableBlogging) {
+        navItems.push({
+            title: "Blog",
+            url: "/blog",
+            icon: Book, // You might want a different icon for Blog
+        })
+    }
 
     return (
         <Sidebar collapsible="icon">
@@ -74,7 +87,7 @@ export function AppSidebar() {
                     </div>
                     <SidebarGroupContent className="mt-2">
                         <SidebarMenu>
-                            {items.map((item) => (
+                            {navItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton
                                         asChild

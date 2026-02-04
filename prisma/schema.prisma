@@ -1,3 +1,6 @@
+// This schema file is the source of truth for your database.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
@@ -20,6 +23,7 @@ model User {
 
   journals Journal[]
   tags     Tag[]
+  posts    BlogPost[]
 }
 
 model Journal {
@@ -73,4 +77,24 @@ model Tag {
   entries Entry[]
 
   @@unique([name, userId])
+}
+
+model BlogPost {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  content   Json?
+  published Boolean  @default(false)
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppConfig {
+  id                  String  @id @default(cuid())
+  redirectHomeToLogin Boolean @default(false)
+  enableBlogging      Boolean @default(false)
 }

@@ -6,13 +6,15 @@ import { ProfileForm } from "@/components/settings/profile-form"
 import { UISettingsForm } from "@/components/settings/ui-settings-form"
 import { BackupView } from "@/components/backup-restore/backup-view"
 import { RestoreView } from "@/components/backup-restore/restore-view"
-import { User, Palette, Archive, RotateCcw } from "lucide-react"
+import { AdditionalFeaturesForm } from "@/components/settings/additional-features-form"
+import { User, Palette, Archive, RotateCcw, Sparkles } from "lucide-react"
+import { getAppConfig } from "@/app/lib/actions"
 
 export default async function SettingsPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
 
-    const [user, journals] = await Promise.all([
+    const [user, journals, appConfig] = await Promise.all([
         prisma.user.findUnique({
             where: { id: session.user.id },
             select: { name: true, email: true }
@@ -20,7 +22,8 @@ export default async function SettingsPage() {
         prisma.journal.findMany({
             where: { userId: session.user.id },
             select: { id: true, title: true }
-        })
+        }),
+        getAppConfig()
     ])
 
     if (!user) return redirect("/login")
@@ -42,6 +45,10 @@ export default async function SettingsPage() {
                         <Palette className="h-4 w-4" />
                         UI Settings
                     </TabsTrigger>
+                    <TabsTrigger value="additional" className="gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        Additional Feature
+                    </TabsTrigger>
                     <TabsTrigger value="backup" className="gap-2">
                         <Archive className="h-4 w-4" />
                         Backup
@@ -58,6 +65,13 @@ export default async function SettingsPage() {
 
                 <TabsContent value="ui" className="space-y-6">
                     <UISettingsForm />
+                </TabsContent>
+
+                <TabsContent value="additional" className="space-y-6">
+                    <AdditionalFeaturesForm
+                        redirectHomeToLogin={appConfig.redirectHomeToLogin}
+                        enableBlogging={appConfig.enableBlogging}
+                    />
                 </TabsContent>
 
                 <TabsContent value="backup" className="space-y-6">

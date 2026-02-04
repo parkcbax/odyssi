@@ -51,6 +51,12 @@ export async function POST(req: NextRequest) {
             for (const j of journals) {
                 if (j.entries) entries.push(...j.entries)
             }
+
+            // Fetch Blog Posts
+            const blogPosts = await prisma.blogPost.findMany({
+                where: { authorId: session.user.id }
+            })
+            dataToBackup.blogPosts = blogPosts
         }
 
         // 2. Prepare Zip
@@ -61,23 +67,51 @@ export async function POST(req: NextRequest) {
 
         // 3. Add Images
         const uploadDir = join(process.cwd(), "public", "uploads")
+        const imagesToAdd = new Set<string>()
 
+        // From Journal Entries (using existing logic, but maybe entries have images relation issues? relying on what's there)
         for (const entry of entries) {
             if (entry.images && entry.images.length > 0) {
                 for (const image of entry.images) {
-                    try {
-                        // Image url is like /uploads/filename.jpg
-                        const filename = image.url.split('/').pop()
-                        if (filename) {
-                            const filePath = join(uploadDir, filename)
-                            const fileData = await readFile(filePath)
-                            zip.addFile(`uploads/${filename}`, fileData)
+                    imagesToAdd.add(image.url)
+                }
+            }
+        }
+
+        // From Blog Posts (Tiptap JSON)
+        if (dataToBackup.blogPosts) {
+            for (const post of dataToBackup.blogPosts) {
+                if (post.content) {
+                    // Extract images from Tiptap JSON
+                    const extractImages = (node: any) => {
+                        if (node.type === 'image' && node.attrs && node.attrs.src) {
+                            imagesToAdd.add(node.attrs.src)
                         }
-                    } catch (e) {
-                        console.warn(`Failed to add image to backup: ${image.url}`, e)
-                        // Continue even if one image fails
+                        if (node.content && Array.isArray(node.content)) {
+                            node.content.forEach(extractImages)
+                        }
+                    }
+                    // Handle if content is the old simple JSON wrapper or Tiptap JSON
+                    // Old: { type: "markdown", text: "..." } - no images usually
+                    // Tiptap: { type: "doc", content: [...] }
+                    if ((post.content as any).type === 'doc') {
+                        extractImages(post.content)
                     }
                 }
+            }
+        }
+
+        for (const url of imagesToAdd) {
+            try {
+                // Image url is like /uploads/filename.jpg
+                const filename = url.split('/').pop()
+                if (filename) {
+                    const filePath = join(uploadDir, filename)
+                    const fileData = await readFile(filePath)
+                    zip.addFile(`uploads/${filename}`, fileData)
+                }
+            } catch (e) {
+                console.warn(`Failed to add image to backup: ${url}`, e)
             }
         }
 
