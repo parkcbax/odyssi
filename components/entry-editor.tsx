@@ -9,7 +9,7 @@ import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import CharacterCount from '@tiptap/extension-character-count'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, forwardRef } from 'react'
 import { Button } from '@/components/ui/button'
 import {
     Bold,
@@ -331,20 +331,23 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
     )
 }
 
-function ToolbarButton({ onClick, isActive, children }: { onClick?: () => void, isActive?: boolean, children: React.ReactNode }) {
-    return (
-        <button
-            onClick={onClick}
-            className={cn(
-                "p-2 rounded-md transition-colors hover:bg-muted text-muted-foreground",
-                isActive && "bg-muted text-foreground"
-            )}
-            type="button"
-        >
-            {children}
-        </button>
-    )
-}
+const ToolbarButton = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { isActive?: boolean }>(
+    ({ className, isActive, ...props }, ref) => {
+        return (
+            <button
+                ref={ref}
+                className={cn(
+                    "p-2 rounded-md transition-colors hover:bg-muted text-muted-foreground",
+                    isActive && "bg-muted text-foreground",
+                    className
+                )}
+                type="button"
+                {...props}
+            />
+        )
+    }
+)
+ToolbarButton.displayName = "ToolbarButton"
 
 function BookIcon({ className }: { className?: string }) {
     return (

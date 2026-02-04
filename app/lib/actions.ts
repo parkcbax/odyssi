@@ -81,12 +81,12 @@ export async function createJournal(
 
 const CreateEntrySchema = z.object({
     title: z.string().min(1, "Title is required"),
-    content: z.string().optional(), // JSON string
+    content: z.string().nullish(),
     journalId: z.string().min(1, "Journal is required"),
-    date: z.string().optional(),
-    mood: z.string().optional(),
-    locationName: z.string().optional(),
-    tags: z.string().optional(),
+    date: z.string().nullish(),
+    mood: z.string().nullish(),
+    locationName: z.string().nullish(),
+    tags: z.string().nullish(),
 })
 
 export async function createEntry(
@@ -107,11 +107,15 @@ export async function createEntry(
     })
 
     if (!validatedFields.success) {
+        console.error("Validation Error:", validatedFields.error)
         return { message: "Invalid fields" }
     }
 
     const { title, content, journalId, date, mood, locationName, tags } = validatedFields.data
     const tagList = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
+    const userId = session.user.id
+
+    console.log("Creating Entry:", { title, journalId, date, mood, locationName, tags: tagList })
 
     try {
         await prisma.entry.create({
@@ -124,8 +128,8 @@ export async function createEntry(
                 locationName,
                 tags: {
                     connectOrCreate: tagList.map(tag => ({
-                        where: { name_userId: { name: tag, userId: session.user.id } },
-                        create: { name: tag, userId: session.user.id }
+                        where: { name_userId: { name: tag, userId } },
+                        create: { name: tag, userId }
                     }))
                 }
             }
@@ -143,12 +147,12 @@ export async function createEntry(
 const UpdateEntrySchema = z.object({
     id: z.string(),
     title: z.string().min(1, "Title is required"),
-    content: z.string().optional(),
+    content: z.string().nullish(),
     journalId: z.string().min(1, "Journal is required"),
-    date: z.string().optional(),
-    mood: z.string().optional(),
-    locationName: z.string().optional(),
-    tags: z.string().optional(),
+    date: z.string().nullish(),
+    mood: z.string().nullish(),
+    locationName: z.string().nullish(),
+    tags: z.string().nullish(),
 })
 
 export async function updateEntry(
@@ -175,12 +179,13 @@ export async function updateEntry(
 
     const { id, title, content, journalId, date, mood, locationName, tags } = validatedFields.data
     const tagList = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
+    const userId = session.user.id
 
     try {
         await prisma.entry.update({
             where: {
                 id: id,
-                journal: { userId: session.user.id }
+                journal: { userId }
             },
             data: {
                 title,
@@ -192,8 +197,8 @@ export async function updateEntry(
                 tags: {
                     set: [],
                     connectOrCreate: tagList.map(tag => ({
-                        where: { name_userId: { name: tag, userId: session.user.id } },
-                        create: { name: tag, userId: session.user.id }
+                        where: { name_userId: { name: tag, userId } },
+                        create: { name: tag, userId }
                     }))
                 }
             }
