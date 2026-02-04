@@ -8,7 +8,8 @@ import {
     Settings,
     MessageSquare,
     LogOut,
-    Plus
+    Plus,
+    Archive
 } from "lucide-react"
 
 import {

@@ -4,16 +4,24 @@ import { redirect } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProfileForm } from "@/components/settings/profile-form"
 import { UISettingsForm } from "@/components/settings/ui-settings-form"
-import { User, Palette, Shield } from "lucide-react"
+import { BackupView } from "@/components/backup-restore/backup-view"
+import { RestoreView } from "@/components/backup-restore/restore-view"
+import { User, Palette, Archive, RotateCcw } from "lucide-react"
 
 export default async function SettingsPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
 
-    const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { name: true, email: true }
-    })
+    const [user, journals] = await Promise.all([
+        prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { name: true, email: true }
+        }),
+        prisma.journal.findMany({
+            where: { userId: session.user.id },
+            select: { id: true, title: true }
+        })
+    ])
 
     if (!user) return redirect("/login")
 
@@ -25,7 +33,7 @@ export default async function SettingsPage() {
             </div>
 
             <Tabs defaultValue="profile" className="space-y-6">
-                <TabsList className="bg-muted/50 p-1">
+                <TabsList className="bg-muted/50 p-1 w-full sm:w-auto overflow-x-auto flex justify-start">
                     <TabsTrigger value="profile" className="gap-2">
                         <User className="h-4 w-4" />
                         Profile
@@ -33,6 +41,14 @@ export default async function SettingsPage() {
                     <TabsTrigger value="ui" className="gap-2">
                         <Palette className="h-4 w-4" />
                         UI Settings
+                    </TabsTrigger>
+                    <TabsTrigger value="backup" className="gap-2">
+                        <Archive className="h-4 w-4" />
+                        Backup
+                    </TabsTrigger>
+                    <TabsTrigger value="restore" className="gap-2">
+                        <RotateCcw className="h-4 w-4" />
+                        Restore
                     </TabsTrigger>
                 </TabsList>
 
@@ -42,6 +58,14 @@ export default async function SettingsPage() {
 
                 <TabsContent value="ui" className="space-y-6">
                     <UISettingsForm />
+                </TabsContent>
+
+                <TabsContent value="backup" className="space-y-6">
+                    <BackupView journals={journals} />
+                </TabsContent>
+
+                <TabsContent value="restore" className="space-y-6">
+                    <RestoreView />
                 </TabsContent>
             </Tabs>
         </div>

@@ -40,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${kanit.variable} ${prompt.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${kanit.variable} ${prompt.variable}`} suppressHydrationWarning>
       <body className="antialiased">
         <FontLoader />
         <Providers>
