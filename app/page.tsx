@@ -199,6 +199,24 @@ export default async function Home() {
                   Create multiple journals for different aspects of your life.
                 </p>
               </div>
+              <div className="flex flex-col items-center space-y-2 border-border p-4 rounded-lg">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <div className="h-6 w-6 text-primary flex items-center justify-center font-bold">📅</div>
+                </div>
+                <h2 className="text-xl font-bold">Visual Calendar</h2>
+                <p className="text-center text-muted-foreground">
+                  Relive memories with a beautiful calendar view featuring photo thumbnails.
+                </p>
+              </div>
+              <div className="flex flex-col items-center space-y-2 border-border p-4 rounded-lg">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <div className="h-6 w-6 text-primary flex items-center justify-center font-bold">✨</div>
+                </div>
+                <h2 className="text-xl font-bold">Insights & Basics</h2>
+                <p className="text-center text-muted-foreground">
+                  Track streaks and utilize smart defaults for a seamless writing experience.
+                </p>
+              </div>
             </div>
           </div>
         </section>

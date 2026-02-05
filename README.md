@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Odyssi
+
+Odyssi is a minimalist, self-hosted sanctuary for your memories. Private, secure, and beautiful.
+
+## Features
+
+- **Private & Secure:** Self-hosted data ownership. No tracking, no ads.
+- **Rich Text Editor:** Write beautiful entries with Tiptap editor support.
+- **Visual Calendar:** View your memories in a calendar view with photo thumbnails.
+- **Multiple Journals:** Organize your life into different journals (e.g., Personal, Work, Travel).
+- **Smart Defaults:** Set a default journal for quick entry creation.
+- **Insights Dashboard:** diverse analytics including streaks and mood tracking.
+- **Blogging:** Optional public blog to share selected thoughts with the world.
+
+## Tech Stack
+
+- **Framework:** Next.js 15 (App Router)
+- **Database:** PostgreSQL with Prisma ORM
+- **Auth:** NextAuth.js (v5)
+- **UI:** Tailwind CSS, Shadcn command/ui
+- **Deployment:** Docker & Docker Compose
 
 ## Getting Started
 
-First, run the development server:
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/odyssi.git
+    cd odyssi
+    ```
+
+2.  **Environment Setup:**
+    Copy `.env.example` to `.env` and fill in your database credentials and `NEXTAUTH_SECRET`.
+
+3.  **Install Dependencies:**
+    ```bash
+    npm install
+    ```
+
+4.  **Database Migration:**
+    ```bash
+    npx prisma migrate dev
+    ```
+
+5.  **Run Development Server:**
+    ```bash
+    npm run dev
+    ```
+
+## deployment
+
+Use the included `docker-compose.yml` for easy deployment:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker-compose up -d --build
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
