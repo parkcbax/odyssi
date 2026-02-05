@@ -69,7 +69,7 @@ export async function createJournal(
             data: {
                 title,
                 description,
-                color: color || "#4F46E5",
+                color: color || "#718982",
                 icon,
                 userId: session.user.id,
             },

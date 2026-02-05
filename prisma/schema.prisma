@@ -30,7 +30,7 @@ model Journal {
   id          String   @id @default(cuid())
   title       String
   description String?
-  color       String   @default("#4F46E5") // Default to Indigo
+  color       String   @default("#718982") // Default to Sage Green
   icon        String?  // Emoji or icon name
   coverImage  String?
   userId      String

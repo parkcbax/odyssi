@@ -20,7 +20,7 @@ import { useFormStatus } from "react-dom"
 import { cn } from "@/lib/utils"
 
 const COLORS = [
-    "#4F46E5", // Indigo (Default)
+    "#718982", // Sage Green (Default)
     "#0EA5E9", // Sky
     "#22C55E", // Green
     "#EAB308", // Yellow
