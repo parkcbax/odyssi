@@ -50,6 +50,11 @@ model Entry {
   locationName String?
   mood         String? // Emoji or mood name
 
+  isPublic       Boolean   @default(false)
+  publicSlug     String?   @unique
+  publicPassword String?
+  publicExpiresAt DateTime?
+
   journalId String
   journal   Journal @relation(fields: [journalId], references: [id], onDelete: Cascade)
 

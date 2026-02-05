@@ -7,7 +7,8 @@ import { UISettingsForm } from "@/components/settings/ui-settings-form"
 import { BackupView } from "@/components/backup-restore/backup-view"
 import { RestoreView } from "@/components/backup-restore/restore-view"
 import { AdditionalFeaturesForm } from "@/components/settings/additional-features-form"
-import { User, Palette, Archive, RotateCcw, Sparkles } from "lucide-react"
+import { User, Palette, Archive, RotateCcw, Sparkles, Globe } from "lucide-react"
+import { SharedEntriesList } from "@/components/settings/shared-entries-list"
 import { getAppConfig } from "@/app/lib/actions"
 
 export default async function SettingsPage() {
@@ -49,6 +50,10 @@ export default async function SettingsPage() {
                         <Sparkles className="h-4 w-4" />
                         Additional Feature
                     </TabsTrigger>
+                    <TabsTrigger value="public-share" className="gap-2">
+                        <Globe className="h-4 w-4" />
+                        Public Share
+                    </TabsTrigger>
                     <TabsTrigger value="backup" className="gap-2">
                         <Archive className="h-4 w-4" />
                         Backup
@@ -72,6 +77,18 @@ export default async function SettingsPage() {
                         redirectHomeToLogin={appConfig.redirectHomeToLogin}
                         enableBlogging={appConfig.enableBlogging}
                     />
+                </TabsContent>
+
+                <TabsContent value="public-share" className="space-y-6">
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="text-lg font-medium">Publicly Shared Entries</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Manage entries that are currently accessible to the public.
+                            </p>
+                        </div>
+                        <SharedEntriesList />
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="backup" className="space-y-6">

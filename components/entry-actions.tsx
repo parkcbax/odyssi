@@ -6,6 +6,7 @@ import { Trash2, Edit2, FileDown } from "lucide-react"
 import { deleteEntry } from "@/app/lib/actions"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { ShareEntryDialog } from "@/components/share-entry-dialog"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -22,9 +23,21 @@ interface EntryActionsProps {
     entryId: string
     journalId: string
     title: string
+    isPublic: boolean
+    publicSlug: string | null
+    publicPassword?: string | null
+    publicExpiresAt?: Date | null
 }
 
-export function EntryActions({ entryId, journalId, title }: EntryActionsProps) {
+export function EntryActions({
+    entryId,
+    journalId,
+    title,
+    isPublic,
+    publicSlug,
+    publicPassword,
+    publicExpiresAt
+}: EntryActionsProps) {
     const [isDeleting, setIsDeleting] = useState(false)
     const router = useRouter()
 
@@ -68,6 +81,14 @@ export function EntryActions({ entryId, journalId, title }: EntryActionsProps) {
 
     return (
         <div className="flex items-center gap-2">
+            <ShareEntryDialog
+                entryId={entryId}
+                initialIsPublic={isPublic}
+                initialPublicSlug={publicSlug}
+                initialPublicPassword={publicPassword}
+                initialPublicExpiresAt={publicExpiresAt}
+            />
+
             <Button variant="outline" size="sm" onClick={handleSavePDF}>
                 <FileDown className="h-4 w-4 mr-2" />
                 Save PDF

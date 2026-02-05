@@ -46,6 +46,10 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
                             entryId={entry.id}
                             journalId={entry.journalId}
                             title={entry.title}
+                            isPublic={entry.isPublic}
+                            publicSlug={entry.publicSlug}
+                            publicPassword={entry.publicPassword}
+                            publicExpiresAt={entry.publicExpiresAt}
                         />
                     </div>
                 </div>
