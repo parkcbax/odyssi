@@ -13,6 +13,7 @@ services:
       DATABASE_URL: postgresql://odyssi:odyssi_password@postgres:5434/odyssi_db
       NEXTAUTH_SECRET: supersecretchangeinprod
       NEXTAUTH_URL: http://localhost:3000
+      ADMIN_EMAIL: admin@odyssi.com
     volumes:
       - ./public/uploads:/app/public/uploads
       - ./backups:/app/backups

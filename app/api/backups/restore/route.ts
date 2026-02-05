@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir, readdir } from "fs/promises"
 import { join } from "path"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { isAdmin } from "@/lib/auth-utils"
 import AdmZip from "adm-zip"
 
 export async function POST(req: NextRequest) {
@@ -88,20 +89,73 @@ export async function POST(req: NextRequest) {
         const userId = session.user.id
 
         if (data.type === "EVERYTHING") {
+            const isUserAdmin = isAdmin(session.user.email)
+
             // WIPE and REPLACE
             await prisma.$transaction(async (tx) => {
-                // Delete all user data
-                await tx.journal.deleteMany({ where: { userId } })
-                await tx.tag.deleteMany({ where: { userId } })
+
+                // SYSTEM RESTORE LOGIC
+                if (isUserAdmin && data.users && Array.isArray(data.users)) {
+                    console.log("Performing System Restore (Admin)...")
+
+                    // 1. Restore Users
+                    for (const user of data.users) {
+                        await tx.user.upsert({
+                            where: { email: user.email },
+                            update: {
+                                name: user.name,
+                                passwordHash: user.passwordHash,
+                                timezone: user.timezone,
+                                image: user.image,
+                                emailVerified: user.emailVerified
+                            },
+                            create: {
+                                id: user.id, // Preserve ID
+                                name: user.name,
+                                email: user.email,
+                                passwordHash: user.passwordHash,
+                                timezone: user.timezone || "UTC",
+                                image: user.image,
+                                emailVerified: user.emailVerified,
+                                createdAt: user.createdAt
+                            }
+                        })
+                    }
+
+                    // 2. Wipe Data for restored users (or all data if we want a clean slate? Safest to wipe by ID if possible, but for EVERYTHING restore, maybe we assume wipe all?)
+                    // Current logic was: await tx.journal.deleteMany({ where: { userId } }) which only wipes current session user.
+                    // For System restore we should validly restore data for each user.
+
+                    // Strategy: We will iterate over the data items and use their `userId` / `authorId`
+                    // BUT we should probably clear data first to avoid duplicates if IDs match.
+                    // To be safe and simple for "EVERYTHING": 
+                    // If we just create with specified ID it might conflict if we don't delete.
+                    // Let's delete data for users found in the backup to ensure clean state for them.
+
+                    const userIdsFromBackup = data.users.map((u: any) => u.id)
+                    await tx.journal.deleteMany({ where: { userId: { in: userIdsFromBackup } } })
+                    await tx.tag.deleteMany({ where: { userId: { in: userIdsFromBackup } } })
+                    await tx.blogPost.deleteMany({ where: { authorId: { in: userIdsFromBackup } } })
+
+                } else {
+                    // Regular User Restore (Old Logic)
+                    // Only wipe current user
+                    await tx.journal.deleteMany({ where: { userId } })
+                    await tx.tag.deleteMany({ where: { userId } })
+                    await tx.blogPost.deleteMany({ where: { authorId: userId } }) // Wipe existing
+                }
 
                 // Restore Tags
                 if (data.tags) {
                     for (const tag of data.tags) {
+                        // If System Restore, allow original userId. Else force current session userId.
+                        const targetUserId = (isUserAdmin && tag.userId) ? tag.userId : userId
+
                         await tx.tag.create({
                             data: {
                                 id: tag.id,
                                 name: tag.name,
-                                userId
+                                userId: targetUserId
                             }
                         })
                     }
@@ -110,6 +164,9 @@ export async function POST(req: NextRequest) {
                 // Restore Journals & Entries
                 if (data.journals) {
                     for (const j of data.journals) {
+                        // If System Restore, allow original userId. Else force current session userId.
+                        const targetUserId = (isUserAdmin && j.userId) ? j.userId : userId
+
                         await tx.journal.create({
                             data: {
                                 id: j.id,
@@ -117,7 +174,7 @@ export async function POST(req: NextRequest) {
                                 description: j.description,
                                 color: j.color,
                                 icon: j.icon,
-                                userId,
+                                userId: targetUserId,
                                 createdAt: j.createdAt,
                                 entries: {
                                     create: j.entries ? j.entries.map((e: any) => ({
@@ -137,7 +194,7 @@ export async function POST(req: NextRequest) {
                                         },
                                         tags: {
                                             connect: e.tags ? e.tags.map((t: any) => ({
-                                                name_userId: { name: t.name, userId }
+                                                name_userId: { name: t.name, userId: targetUserId }
                                             })) : []
                                         }
                                     })) : []
@@ -148,11 +205,12 @@ export async function POST(req: NextRequest) {
                 }
 
                 // Restore Blog Posts
-                // Delete existing first? "WIPE and REPLACE" strategy for EVERYTHING
-                await tx.blogPost.deleteMany({ where: { authorId: userId } }) // Wipe existing
 
                 if (data.blogPosts) {
                     for (const post of data.blogPosts) {
+                        // If System Restore, allow original userId. Else force current session userId.
+                        const targetAuthorId = (isUserAdmin && post.authorId) ? post.authorId : userId
+
                         await tx.blogPost.create({
                             data: {
                                 id: post.id,
@@ -161,7 +219,7 @@ export async function POST(req: NextRequest) {
                                 content: post.content,
                                 published: post.published,
                                 createdAt: post.createdAt,
-                                authorId: userId
+                                authorId: targetAuthorId
                             }
                         })
                     }

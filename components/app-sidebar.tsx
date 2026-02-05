@@ -55,13 +55,17 @@ const items = [
 
 import { usePathname } from "next/navigation"
 
+import { Users } from "lucide-react"
+
 interface AppSidebarProps {
     enableBlogging?: boolean
+    isAdmin?: boolean
+    enableMultiUser?: boolean
 }
 
 import { handleSignOut } from "@/app/lib/actions"
 
-export function AppSidebar({ enableBlogging }: AppSidebarProps) {
+export function AppSidebar({ enableBlogging, isAdmin, enableMultiUser }: AppSidebarProps) {
     const pathname = usePathname()
 
     const navItems = [...items]
@@ -70,6 +74,14 @@ export function AppSidebar({ enableBlogging }: AppSidebarProps) {
             title: "Blog",
             url: "/dashboard/blog",
             icon: Book, // You might want a different icon for Blog
+        })
+    }
+
+    if (isAdmin && enableMultiUser) {
+        navItems.push({
+            title: "Users",
+            url: "/users",
+            icon: Users,
         })
     }
 

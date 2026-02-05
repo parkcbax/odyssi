@@ -12,9 +12,10 @@ import { useRouter } from "next/navigation"
 interface AdditionalFeaturesFormProps {
     redirectHomeToLogin: boolean
     enableBlogging: boolean
+    enableMultiUser: boolean
 }
 
-export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging }: AdditionalFeaturesFormProps) {
+export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, enableMultiUser }: AdditionalFeaturesFormProps) {
     const [state, formAction, isPending] = useActionState(updateAppFeatures, null)
     const router = useRouter()
 
@@ -61,6 +62,19 @@ export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging }: 
                             id="enableBlogging"
                             name="enableBlogging"
                             defaultChecked={enableBlogging}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between space-x-2">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="enableMultiUser" className="text-base">Multi-User Support</Label>
+                            <p className="text-sm text-muted-foreground">
+                                If enabled, allows Admins to manage multiple users and users to login.
+                            </p>
+                        </div>
+                        <Switch
+                            id="enableMultiUser"
+                            name="enableMultiUser"
+                            defaultChecked={enableMultiUser}
                         />
                     </div>
                     <Button type="submit" disabled={isPending}>

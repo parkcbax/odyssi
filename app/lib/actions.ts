@@ -4,6 +4,8 @@ import { signIn, signOut } from "@/auth"
 import { AuthError } from "next-auth"
 import { redirect } from "next/navigation"
 import { getExcerpt } from "@/app/lib/blog-utils"
+import { isAdmin } from "@/lib/auth-utils"
+import bcrypt from "bcryptjs"
 
 export async function authenticate(
     prevState: string | undefined,
@@ -408,7 +410,8 @@ export async function getAppConfig() {
         return await prisma.appConfig.create({
             data: {
                 redirectHomeToLogin: false,
-                enableBlogging: false
+                enableBlogging: false,
+                enableMultiUser: false
             }
         })
     }
@@ -422,6 +425,7 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
     const redirectHomeToLogin = formData.get("redirectHomeToLogin") === "on"
     const enableBlogging = formData.get("enableBlogging") === "on"
     const enableAutoBackup = formData.get("enableAutoBackup") === "on"
+    const enableMultiUser = formData.get("enableMultiUser") === "on"
     const autoBackupInterval = formData.get("autoBackupInterval") as string || "1Week"
 
     try {
@@ -431,11 +435,11 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
         if (id) {
             await prisma.appConfig.update({
                 where: { id },
-                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, autoBackupInterval }
+                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, autoBackupInterval }
             })
         } else {
             await prisma.appConfig.create({
-                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, autoBackupInterval }
+                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, autoBackupInterval }
             })
         }
 
@@ -609,5 +613,93 @@ export async function deleteBlogPost(id: string) {
     } catch (error) {
         console.error("Failed to delete blog post:", error)
         return { message: "Database Error" }
+    }
+}
+
+// User Management Actions
+export async function getUsers() {
+    const session = await auth()
+    if (!isAdmin(session?.user?.email)) {
+        throw new Error("Unauthorized")
+    }
+
+    const users = await prisma.user.findMany({
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            _count: {
+                select: { journals: true, posts: true }
+            }
+        },
+        orderBy: { createdAt: 'desc' }
+    })
+
+    return users
+}
+
+export async function createNewUser(formData: FormData) {
+    const session = await auth()
+    if (!isAdmin(session?.user?.email)) {
+        return { error: "Unauthorized" }
+    }
+
+    const name = formData.get("name") as string
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+
+    if (!name || !email || !password) {
+        return { error: "Missing fields" }
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+        where: { email }
+    })
+
+    if (existingUser) {
+        return { error: "User already exists" }
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10)
+
+    try {
+        await prisma.user.create({
+            data: {
+                name,
+                email,
+                passwordHash,
+                timezone: "UTC", // Default
+            }
+        })
+        revalidatePath("/users")
+        return { success: true }
+    } catch (error) {
+        console.error("Failed to create user:", error)
+        return { error: "Failed to create user" }
+    }
+}
+
+export async function deleteUser(userId: string) {
+    const session = await auth()
+    if (!isAdmin(session?.user?.email)) {
+        return { error: "Unauthorized" }
+    }
+
+    if (userId === session?.user?.id) {
+        return { error: "Cannot delete your own account" }
+    }
+
+    try {
+        await prisma.user.delete({
+            where: { id: userId }
+        })
+        revalidatePath("/users")
+        return { success: true }
+    } catch (error) {
+        console.error("Failed to delete user:", error)
+        return { error: "Failed to delete user" }
     }
 }

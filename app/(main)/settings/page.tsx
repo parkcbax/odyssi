@@ -11,9 +11,13 @@ import { User, Palette, Archive, RotateCcw, Sparkles, Globe } from "lucide-react
 import { SharedEntriesList } from "@/components/settings/shared-entries-list"
 import { getAppConfig } from "@/app/lib/actions"
 
+import { isAdmin } from "@/lib/auth-utils"
+
 export default async function SettingsPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
+
+    const isUserAdmin = isAdmin(session?.user?.email)
 
     const [user, journals, appConfig] = await Promise.all([
         prisma.user.findUnique({
@@ -42,26 +46,31 @@ export default async function SettingsPage() {
                         <User className="h-4 w-4" />
                         Profile
                     </TabsTrigger>
-                    <TabsTrigger value="ui" className="gap-2">
-                        <Palette className="h-4 w-4" />
-                        UI Settings
-                    </TabsTrigger>
-                    <TabsTrigger value="additional" className="gap-2">
-                        <Sparkles className="h-4 w-4" />
-                        Additional Feature
-                    </TabsTrigger>
-                    <TabsTrigger value="public-share" className="gap-2">
-                        <Globe className="h-4 w-4" />
-                        Public Share
-                    </TabsTrigger>
-                    <TabsTrigger value="backup" className="gap-2">
-                        <Archive className="h-4 w-4" />
-                        Backup
-                    </TabsTrigger>
-                    <TabsTrigger value="restore" className="gap-2">
-                        <RotateCcw className="h-4 w-4" />
-                        Restore
-                    </TabsTrigger>
+
+                    {isUserAdmin && (
+                        <>
+                            <TabsTrigger value="ui" className="gap-2">
+                                <Palette className="h-4 w-4" />
+                                UI Settings
+                            </TabsTrigger>
+                            <TabsTrigger value="additional" className="gap-2">
+                                <Sparkles className="h-4 w-4" />
+                                Additional Feature
+                            </TabsTrigger>
+                            <TabsTrigger value="public-share" className="gap-2">
+                                <Globe className="h-4 w-4" />
+                                Public Share
+                            </TabsTrigger>
+                            <TabsTrigger value="backup" className="gap-2">
+                                <Archive className="h-4 w-4" />
+                                Backup
+                            </TabsTrigger>
+                            <TabsTrigger value="restore" className="gap-2">
+                                <RotateCcw className="h-4 w-4" />
+                                Restore
+                            </TabsTrigger>
+                        </>
+                    )}
                 </TabsList>
 
                 <TabsContent value="profile" className="space-y-6">
@@ -76,6 +85,7 @@ export default async function SettingsPage() {
                     <AdditionalFeaturesForm
                         redirectHomeToLogin={appConfig.redirectHomeToLogin}
                         enableBlogging={appConfig.enableBlogging}
+                        enableMultiUser={appConfig.enableMultiUser}
                     />
                 </TabsContent>
 

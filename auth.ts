@@ -1,10 +1,9 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { z } from "zod"
-import { PrismaClient } from "@prisma/client"
 import { authConfig } from "./auth.config"
-
 import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
 
 // Schema to validate login input
 const signInSchema = z.object({
@@ -48,11 +47,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     throw new Error("User not found.")
                 }
 
-                // Verify password (In real app: await bcrypt.compare(password, user.passwordHash))
-                // For now, simple comparison or assuming we are developing
-                // WARNING: INSECURE - replace with hashing
-                if (user.passwordHash !== password) {
-                    throw new Error("Invalid credentials.")
+                // Verify password
+                // Check if the stored password is a hash (starts with $2)
+                const isHash = user.passwordHash?.startsWith("$2")
+
+                if (isHash) {
+                    const passwordsMatch = await bcrypt.compare(password, user.passwordHash!)
+                    if (!passwordsMatch) {
+                        throw new Error("Invalid credentials.")
+                    }
+                } else {
+                    // Fallback for legacy/dev/plain text passwords
+                    console.warn("WARNING: checking plain text password for user:", email)
+                    if (user.passwordHash !== password) {
+                        throw new Error("Invalid credentials.")
+                    }
+                    // Optionally: Upgrade to hash on successful login? 
+                    // For now, let's just allow it.
                 }
 
                 // return user object provided to session

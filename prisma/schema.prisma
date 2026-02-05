@@ -111,4 +111,7 @@ model AppConfig {
   enableAutoBackup    Boolean @default(false)
   autoBackupInterval  String  @default("1Week") // 1Week, 1Month, 6Month, 1Year
   lastAutoBackupAt    DateTime?
+  
+  // Multi-User Settings
+  enableMultiUser     Boolean @default(false)
 }

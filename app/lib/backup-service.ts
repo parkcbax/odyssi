@@ -64,6 +64,12 @@ export async function generateBackup(options: BackupOptions) {
             where: userId ? { authorId: userId } : {}
         })
         dataToBackup.blogPosts = blogPosts
+
+        // Fetch Users (only for System Backup i.e., no specific userId filter)
+        if (!userId) {
+            const users = await prisma.user.findMany()
+            dataToBackup.users = users
+        }
     }
 
     // 2. Prepare Zip
