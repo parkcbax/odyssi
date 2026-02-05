@@ -1,5 +1,13 @@
 "use client"
 
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { timezones } from "@/lib/timezones"
 import { useActionState, useEffect } from "react"
 import { useFormStatus } from "react-dom"
 import { updateProfile, updatePassword } from "@/app/lib/actions"
@@ -15,6 +23,7 @@ interface ProfileFormProps {
     user: {
         name: string | null
         email: string
+        timezone: string | null
     }
 }
 
@@ -77,6 +86,21 @@ export function ProfileForm({ user }: ProfileFormProps) {
                             <Label htmlFor="email">Email</Label>
                             <Input id="email" name="email" type="email" defaultValue={user.email} required />
                             {state?.errors?.email && <p className="text-sm text-red-500">{state.errors.email}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="timezone">Timezone</Label>
+                            <Select name="timezone" defaultValue={user.timezone || "UTC"}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select timezone" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {timezones.map((tz) => (
+                                        <SelectItem key={tz} value={tz}>
+                                            {tz}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CardContent>
                     <CardFooter>

@@ -17,7 +17,7 @@ export default async function SettingsPage() {
     const [user, journals, appConfig] = await Promise.all([
         prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { name: true, email: true }
+            select: { name: true, email: true, timezone: true }
         }),
         prisma.journal.findMany({
             where: { userId: session.user.id },

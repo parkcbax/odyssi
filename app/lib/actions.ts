@@ -309,6 +309,7 @@ export async function deleteEntry(id: string) {
 const UpdateProfileSchema = z.object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("Invalid email"),
+    timezone: z.string().optional(),
 })
 
 export async function updateProfile(
@@ -321,18 +322,23 @@ export async function updateProfile(
     const validatedFields = UpdateProfileSchema.safeParse({
         name: formData.get("name"),
         email: formData.get("email"),
+        timezone: formData.get("timezone"),
     })
 
     if (!validatedFields.success) {
         return { errors: validatedFields.error.flatten().fieldErrors, message: "Invalid fields" }
     }
 
-    const { name, email } = validatedFields.data
+    const { name, email, timezone } = validatedFields.data
 
     try {
         await prisma.user.update({
             where: { id: session.user.id },
-            data: { name, email }
+            data: {
+                name,
+                email,
+                timezone: timezone || "UTC"
+            }
         })
         revalidatePath("/settings")
         return { message: "Success" }
