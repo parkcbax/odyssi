@@ -69,7 +69,7 @@ export default async function SettingsPage() {
                 </TabsContent>
 
                 <TabsContent value="ui" className="space-y-6">
-                    <UISettingsForm />
+                    <UISettingsForm enableBlogging={appConfig.enableBlogging} />
                 </TabsContent>
 
                 <TabsContent value="additional" className="space-y-6">

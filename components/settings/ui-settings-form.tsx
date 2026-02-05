@@ -8,20 +8,46 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Laptop, Moon, Sun } from "lucide-react"
 
-export function UISettingsForm() {
+interface UISettingsFormProps {
+    enableBlogging?: boolean
+}
+
+export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
     const { theme, setTheme } = useTheme()
     const [font, setFont] = useState("inter")
+    const [blogFont, setBlogFont] = useState("inter")
+    const [blogSize, setBlogSize] = useState("medium")
 
     useEffect(() => {
         const savedFont = localStorage.getItem("odyssi-font") || "inter"
         setFont(savedFont)
         document.documentElement.setAttribute("data-font", savedFont)
+
+        const savedBlogFont = localStorage.getItem("odyssi-blog-font") || "inter"
+        setBlogFont(savedBlogFont)
+        document.documentElement.setAttribute("data-blog-font", savedBlogFont)
+
+        const savedBlogSize = localStorage.getItem("odyssi-blog-size") || "medium"
+        setBlogSize(savedBlogSize)
+        document.documentElement.setAttribute("data-blog-size", savedBlogSize)
     }, [])
 
     const handleFontChange = (value: string) => {
         setFont(value)
         localStorage.setItem("odyssi-font", value)
         document.documentElement.setAttribute("data-font", value)
+    }
+
+    const handleBlogFontChange = (value: string) => {
+        setBlogFont(value)
+        localStorage.setItem("odyssi-blog-font", value)
+        document.documentElement.setAttribute("data-blog-font", value)
+    }
+
+    const handleBlogSizeChange = (value: string) => {
+        setBlogSize(value)
+        localStorage.setItem("odyssi-blog-size", value)
+        document.documentElement.setAttribute("data-blog-size", value)
     }
 
     return (
@@ -103,6 +129,51 @@ export function UISettingsForm() {
                     </div>
                 </CardContent>
             </Card>
+
+            {enableBlogging && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Blog Typography</CardTitle>
+                        <CardDescription>
+                            Customize the reading experience for blog posts.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Blog Font</Label>
+                                <Select value={blogFont} onValueChange={handleBlogFontChange}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a font" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="inter">Inter (Sans-serif)</SelectItem>
+                                        <SelectItem value="kanit">Kanit (Sans-serif)</SelectItem>
+                                        <SelectItem value="prompt">Prompt (Sans-serif)</SelectItem>
+                                        <SelectItem value="roboto">Roboto (Sans-serif)</SelectItem>
+                                        <SelectItem value="serif">Serif (Classic)</SelectItem>
+                                        <SelectItem value="mono">Monospace (Code)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Font Size</Label>
+                                <Select value={blogSize} onValueChange={handleBlogSizeChange}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a size" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="small">Small</SelectItem>
+                                        <SelectItem value="medium">Medium (Default)</SelectItem>
+                                        <SelectItem value="large">Large</SelectItem>
+                                        <SelectItem value="xl">Extra Large</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     )
 }

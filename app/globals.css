@@ -189,6 +189,109 @@
   font-family: var(--app-font-family) !important;
 }
 
+/* Blog Font Configuration */
+[data-blog-font="inter"] .prose,
+[data-blog-font="inter"] .ProseMirror {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif !important;
+}
+
+[data-blog-font="kanit"] .prose,
+[data-blog-font="kanit"] .ProseMirror {
+  font-family: var(--font-kanit), ui-sans-serif, system-ui, sans-serif !important;
+}
+
+[data-blog-font="prompt"] .prose,
+[data-blog-font="prompt"] .ProseMirror {
+  font-family: var(--font-prompt), ui-sans-serif, system-ui, sans-serif !important;
+}
+
+[data-blog-font="roboto"] .prose,
+[data-blog-font="roboto"] .ProseMirror {
+  font-family: 'Roboto', ui-sans-serif, system-ui, sans-serif !important;
+}
+
+[data-blog-font="serif"] .prose,
+[data-blog-font="serif"] .ProseMirror {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif !important;
+}
+
+[data-blog-font="mono"] .prose,
+[data-blog-font="mono"] .ProseMirror {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+/* Blog Size Configuration */
+[data-blog-size="small"] .prose,
+[data-blog-size="small"] .ProseMirror {
+  font-size: 0.875rem !important;
+  /* 14px */
+}
+
+[data-blog-size="medium"] .prose,
+[data-blog-size="medium"] .ProseMirror {
+  font-size: 1rem !important;
+  /* 16px - tailwind default prose base */
+}
+
+[data-blog-size="large"] .prose,
+[data-blog-size="large"] .ProseMirror {
+  font-size: 1.125rem !important;
+  /* 18px */
+}
+
+[data-blog-size="xl"] .prose,
+[data-blog-size="xl"] .ProseMirror {
+  font-size: 1.25rem !important;
+  /* 20px */
+}
+
+/* Ensure headings scale relatively or stay readable */
+[data-blog-size="large"] .prose h1,
+[data-blog-size="xl"] .prose h1 {
+  font-size: 2.5em !important;
+}
+
+/* ... etc, simplify for now, allowing prose to do its relative sizing based on base font size is usually best, 
+   but tailwind prose sets hard pixels on elements sometimes. 
+   Ideally we just set base size and let ems work, but prose class sets font-size on p, h1, etc specifically.
+   We might need to override --tw-prose-body and similar variables if using tailwind typography v3.
+   Let's try vars first which is cleaner if supported.
+*/
+
+[data-blog-size="small"] .prose,
+[data-blog-size="small"] .ProseMirror,
+[data-blog-size="small"] .prose p,
+[data-blog-size="small"] .ProseMirror p {
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+}
+
+[data-blog-size="medium"] .prose,
+[data-blog-size="medium"] .ProseMirror,
+[data-blog-size="medium"] .prose p,
+[data-blog-size="medium"] .ProseMirror p {
+  font-size: 1.125rem !important;
+  /* Bump default base to be more readable */
+  line-height: 1.75 !important;
+}
+
+[data-blog-size="large"] .prose,
+[data-blog-size="large"] .ProseMirror,
+[data-blog-size="large"] .prose p,
+[data-blog-size="large"] .ProseMirror p {
+  font-size: 1.25rem !important;
+  line-height: 1.8 !important;
+}
+
+[data-blog-size="xl"] .prose,
+[data-blog-size="xl"] .ProseMirror,
+[data-blog-size="xl"] .prose p,
+[data-blog-size="xl"] .ProseMirror p {
+  font-size: 1.5rem !important;
+  line-height: 2 !important;
+}
+
+
 @media print {
 
   /* Explicitly hide the entire original app structure */
