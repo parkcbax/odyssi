@@ -131,32 +131,36 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
     }
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file || !editor) return
+        const files = e.target.files
+        if (!files || files.length === 0 || !editor) return
 
         setIsUploading(true)
-        const formData = new FormData()
-        formData.append("file", file)
 
-        try {
-            const response = await fetch("/api/upload", {
-                method: "POST",
-                body: formData,
-            })
+        // Upload sequentially
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+            const formData = new FormData()
+            formData.append("file", file)
 
-            const data = await response.json()
-            if (data.url) {
-                editor.chain().focus().setImage({ src: data.url }).run()
-            } else {
-                alert("Upload failed")
+            try {
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                })
+
+                const data = await response.json()
+                if (data.url) {
+                    editor.chain().focus().setImage({ src: data.url }).run()
+                } else {
+                    console.error("Upload failed for file:", file.name)
+                }
+            } catch (error) {
+                console.error("Upload error:", error)
             }
-        } catch (error) {
-            console.error("Upload error:", error)
-            alert("Upload failed")
-        } finally {
-            setIsUploading(false)
-            e.target.value = ""
         }
+
+        setIsUploading(false)
+        e.target.value = ""
     }
 
     const setLink = () => {
@@ -199,6 +203,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                             id="blog-image-upload"
                             type="file"
                             accept="image/*"
+                            multiple
                             className="hidden"
                             onChange={handleImageUpload}
                         />
