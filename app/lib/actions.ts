@@ -421,6 +421,8 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
 
     const redirectHomeToLogin = formData.get("redirectHomeToLogin") === "on"
     const enableBlogging = formData.get("enableBlogging") === "on"
+    const enableAutoBackup = formData.get("enableAutoBackup") === "on"
+    const autoBackupInterval = formData.get("autoBackupInterval") as string || "1Week"
 
     try {
         const config = await prisma.appConfig.findFirst()
@@ -429,11 +431,11 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
         if (id) {
             await prisma.appConfig.update({
                 where: { id },
-                data: { redirectHomeToLogin, enableBlogging }
+                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, autoBackupInterval }
             })
         } else {
             await prisma.appConfig.create({
-                data: { redirectHomeToLogin, enableBlogging }
+                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, autoBackupInterval }
             })
         }
 

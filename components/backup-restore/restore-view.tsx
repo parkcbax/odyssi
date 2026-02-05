@@ -131,17 +131,27 @@ export function RestoreView() {
                                                 <h4 className="font-medium truncate max-w-[200px] sm:max-w-md" title={backup.name}>
                                                     {backup.name}
                                                 </h4>
-                                                <div className="flex gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
+                                                <div className="flex gap-2 text-xs text-muted-foreground mt-1 flex-wrap items-center">
+                                                    {backup.name.startsWith("auto-backup") ? (
+                                                        <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
+                                                            AUTO
+                                                        </span>
+                                                    ) : (
+                                                        <span className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
+                                                            MANUAL
+                                                        </span>
+                                                    )}
+                                                    <span>•</span>
                                                     <span className="font-mono">{(backup.size / 1024 / 1024).toFixed(2)} MB</span>
                                                     <span>•</span>
-                                                    <span>{new Date(backup.createdAt).toLocaleDateString()}</span>
+                                                    <span>{new Date(backup.createdAt).toLocaleDateString()} {new Date(backup.createdAt).toLocaleTimeString()}</span>
                                                     <span>•</span>
                                                     <span className={`font-semibold ${isEverything ? "text-amber-500" : "text-blue-500"}`}>
                                                         {type}
                                                     </span>
                                                     {type === "JOURNAL" && (
                                                         <span className="font-semibold text-primary">
-                                                            - {backup.name.split("-JOURNAL-")[1]?.split("-202")[0]?.replace(/_/g, " ")}
+                                                            - {backup.name.includes("-JOURNAL-") ? backup.name.split("-JOURNAL-")[1]?.split("-202")[0]?.replace(/_/g, " ") : "Unknown"}
                                                         </span>
                                                     )}
                                                 </div>

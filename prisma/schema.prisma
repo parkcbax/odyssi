@@ -106,4 +106,9 @@ model AppConfig {
   id                  String  @id @default(cuid())
   redirectHomeToLogin Boolean @default(false)
   enableBlogging      Boolean @default(false)
+  
+  // Auto Backup Settings
+  enableAutoBackup    Boolean @default(false)
+  autoBackupInterval  String  @default("1Week") // 1Week, 1Month, 6Month, 1Year
+  lastAutoBackupAt    DateTime?
 }
