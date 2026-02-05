@@ -22,7 +22,10 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
         },
         include: {
             entries: {
-                orderBy: { date: 'desc' }
+                orderBy: { date: 'desc' },
+                include: {
+                    tags: { select: { name: true } }
+                }
             }
         }
     })
@@ -85,18 +88,29 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {journal.entries.map((entry) => (
                             <Link key={entry.id} href={`/entries/${entry.id}`}>
-                                <Card className="hover:bg-muted/50 transition-colors h-full">
+                                <Card className="hover:bg-muted/50 transition-colors h-full flex flex-col">
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg">{entry.title}</CardTitle>
-                                        <CardDescription className="flex items-center gap-2 text-xs">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <CardTitle className="text-lg leading-tight line-clamp-1" title={entry.title}>
+                                                {entry.title}
+                                            </CardTitle>
+                                            {entry.mood && <span className="text-xl" title="Mood">{entry.mood}</span>}
+                                        </div>
+                                        <CardDescription className="flex flex-col gap-1 text-xs">
                                             <span className="flex items-center gap-1">
                                                 <Calendar className="h-3 w-3" />
                                                 {new Date(entry.date).toLocaleDateString()}
                                             </span>
+                                            {entry.locationName && (
+                                                <span className="flex items-center gap-1 truncate" title={entry.locationName}>
+                                                    <MapPin className="h-3 w-3 shrink-0" />
+                                                    {entry.locationName}
+                                                </span>
+                                            )}
                                         </CardDescription>
                                     </CardHeader>
-                                    <CardContent>
-                                        <div className="flex gap-4">
+                                    <CardContent className="flex-1 flex flex-col gap-4">
+                                        <div className="flex gap-4 flex-1">
                                             <div className="flex-1 space-y-2">
                                                 <p className="text-sm text-muted-foreground line-clamp-3">
                                                     {getContentSnippet(entry.content)}
@@ -113,6 +127,15 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                                                 </div>
                                             )}
                                         </div>
+                                        {entry.tags && entry.tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-auto pt-2">
+                                                {entry.tags.map(tag => (
+                                                    <span key={tag.name} className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold overflow-hidden text-nowrap text-muted-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                                        #{tag.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             </Link>
