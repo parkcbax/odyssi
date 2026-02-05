@@ -5,8 +5,8 @@ import { Calendar, CalendarDayButton } from "@/components/ui/calendar"
 import { Card, CardContent } from "@/components/ui/card"
 import { format, isSameDay, startOfDay } from "date-fns"
 import Link from "next/link"
-import { MessageSquare } from "lucide-react"
-import { getFirstImage } from "@/lib/editor-utils"
+import { MessageSquare, MapPin } from "lucide-react"
+import { getFirstImage, getContentSnippet } from "@/lib/editor-utils"
 import { ImageWithLoader } from "@/components/ui/image-with-loader"
 import { cn } from "@/lib/utils"
 
@@ -108,34 +108,56 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
                         selectedDateEntries.map((entry) => (
                             <Link key={entry.id} href={`/entries/${entry.id}`} className="block">
                                 <Card className="hover:bg-muted/50 transition-colors group cursor-pointer">
-                                    <CardContent className="p-3 flex items-start gap-3">
-                                        {entry.mood && (
-                                            <span className="text-xl shrink-0 mt-0.5">{entry.mood}</span>
-                                        )}
-                                        <div className="flex flex-1 items-start justify-between gap-3 min-w-0">
-                                            <div className="min-w-0">
-                                                <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-                                                    {entry.title}
-                                                </h4>
-                                                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                                                    <div
-                                                        className="w-1.5 h-1.5 rounded-full"
-                                                        style={{ backgroundColor: entry.journal.color }}
-                                                    />
-                                                    {entry.journal.title}
-                                                </div>
-                                            </div>
-                                            {getFirstImage(entry.content) && (
-                                                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border bg-muted">
-                                                    <ImageWithLoader
-                                                        src={getFirstImage(entry.content)!}
-                                                        alt={entry.title}
-                                                        className="h-full w-full object-cover"
-                                                        containerClassName="h-full w-full"
-                                                    />
-                                                </div>
+                                    <CardContent className="p-3 flex flex-col gap-3">
+                                        <div className="flex items-start gap-3">
+                                            {entry.mood && (
+                                                <span className="text-xl shrink-0 mt-0.5">{entry.mood}</span>
                                             )}
+                                            <div className="flex flex-1 items-start justify-between gap-3 min-w-0">
+                                                <div className="min-w-0 flex-1">
+                                                    <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                                                        {entry.title}
+                                                    </h4>
+                                                    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                                                        <div
+                                                            className="w-1.5 h-1.5 rounded-full"
+                                                            style={{ backgroundColor: entry.journal.color }}
+                                                        />
+                                                        {entry.journal.title}
+                                                    </div>
+                                                </div>
+                                                {getFirstImage(entry.content) && (
+                                                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded border bg-muted">
+                                                        <ImageWithLoader
+                                                            src={getFirstImage(entry.content)!}
+                                                            alt={entry.title}
+                                                            className="h-full w-full object-cover"
+                                                            containerClassName="h-full w-full"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
+
+                                        <div className="text-xs text-muted-foreground line-clamp-2">
+                                            {getContentSnippet(entry.content)}
+                                        </div>
+
+                                        {(entry.locationName || (entry.tags && entry.tags.length > 0)) && (
+                                            <div className="flex flex-wrap gap-2 items-center text-[10px] text-muted-foreground pt-1 border-t mt-1">
+                                                {entry.locationName && (
+                                                    <span className="flex items-center gap-0.5 truncate max-w-[150px]">
+                                                        <MapPin className="h-3 w-3 shrink-0" />
+                                                        {entry.locationName}
+                                                    </span>
+                                                )}
+                                                {entry.tags && entry.tags.map((tag: any) => (
+                                                    <span key={tag.name} className="bg-muted px-1.5 py-0.5 rounded-full truncate max-w-[100px]">
+                                                        #{tag.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             </Link>
