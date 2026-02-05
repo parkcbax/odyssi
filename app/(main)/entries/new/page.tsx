@@ -10,7 +10,11 @@ export default async function NewEntryPage() {
     // Fetch journals for the selector
     const journals = await prisma.journal.findMany({
         where: { userId: session.user.id },
-        select: { id: true, title: true, color: true }
+        select: { id: true, title: true, color: true, isDefault: true },
+        orderBy: [
+            { isDefault: 'desc' },
+            { createdAt: 'desc' }
+        ]
     })
 
     if (journals.length === 0) {

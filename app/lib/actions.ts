@@ -41,6 +41,7 @@ const CreateJournalSchema = z.object({
     description: z.string().max(500).optional(),
     color: z.string().optional(),
     icon: z.string().optional(),
+    isDefault: z.string().optional(),
 })
 
 export async function createJournal(
@@ -57,6 +58,7 @@ export async function createJournal(
         description: formData.get("description"),
         color: formData.get("color"),
         icon: formData.get("icon"),
+        isDefault: formData.get("isDefault"),
     })
 
     if (!validatedFields.success) {
@@ -66,19 +68,28 @@ export async function createJournal(
         }
     }
 
-    const { title, description, color, icon } = validatedFields.data
+    const { title, description, color, icon, isDefault } = validatedFields.data
+    const isDefaultBool = isDefault === "on"
 
     try {
-        console.log("Creating journal for user:", session.user.id);
-        console.log("Data:", { title, description, color, icon });
-        await prisma.journal.create({
-            data: {
-                title,
-                description,
-                color: color || "#718982",
-                icon,
-                userId: session.user.id,
-            },
+        await prisma.$transaction(async (tx) => {
+            if (isDefaultBool) {
+                await tx.journal.updateMany({
+                    where: { userId: session.user.id },
+                    data: { isDefault: false }
+                })
+            }
+
+            await tx.journal.create({
+                data: {
+                    title,
+                    description,
+                    color: color || "#718982",
+                    icon,
+                    isDefault: isDefaultBool,
+                    userId: session.user.id,
+                },
+            })
         })
     } catch (error) {
         console.error("Failed to create journal:", error);
@@ -95,6 +106,7 @@ const UpdateJournalSchema = z.object({
     description: z.string().max(500).optional(),
     color: z.string().optional(),
     icon: z.string().optional(),
+    isDefault: z.string().optional(),
 })
 
 export async function updateJournal(
@@ -110,6 +122,7 @@ export async function updateJournal(
         description: formData.get("description"),
         color: formData.get("color"),
         icon: formData.get("icon"),
+        isDefault: formData.get("isDefault"),
     })
 
     if (!validatedFields.success) {
@@ -119,12 +132,22 @@ export async function updateJournal(
         }
     }
 
-    const { id, title, description, color, icon } = validatedFields.data
+    const { id, title, description, color, icon, isDefault } = validatedFields.data
+    const isDefaultBool = isDefault === "on"
 
     try {
-        await prisma.journal.update({
-            where: { id, userId: session.user.id },
-            data: { title, description, color, icon }
+        await prisma.$transaction(async (tx) => {
+            if (isDefaultBool) {
+                await tx.journal.updateMany({
+                    where: { userId: session.user.id },
+                    data: { isDefault: false }
+                })
+            }
+
+            await tx.journal.update({
+                where: { id, userId: session.user.id },
+                data: { title, description, color, icon, isDefault: isDefaultBool }
+            })
         })
     } catch (error) {
         console.error("Failed to update journal:", error);

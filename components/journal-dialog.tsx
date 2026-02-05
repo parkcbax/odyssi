@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Edit2, Settings } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import { createJournal, updateJournal } from "@/app/lib/actions"
 import { useActionState, useState, useEffect } from "react"
 import { useFormStatus } from "react-dom"
@@ -46,6 +47,7 @@ interface JournalDialogProps {
         description: string | null
         color: string
         icon: string | null
+        isDefault?: boolean
     }
     trigger?: React.ReactNode
 }
@@ -60,6 +62,7 @@ export function JournalDialog({ mode = "create", journal, trigger }: JournalDial
     const [description, setDescription] = useState(journal?.description || "")
     const [selectedColor, setSelectedColor] = useState(journal?.color || COLORS[0])
     const [selectedIcon, setSelectedIcon] = useState(journal?.icon || "")
+    const [isDefault, setIsDefault] = useState(journal?.isDefault || false)
 
     useEffect(() => {
         if (state?.message === "Success") {
@@ -70,6 +73,7 @@ export function JournalDialog({ mode = "create", journal, trigger }: JournalDial
                 setDescription("")
                 setSelectedColor(COLORS[0])
                 setSelectedIcon("")
+                setIsDefault(false)
             }
         }
     }, [state, mode])
@@ -181,6 +185,19 @@ export function JournalDialog({ mode = "create", journal, trigger }: JournalDial
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2 border rounded-lg p-3 bg-muted/20">
+                            <Switch
+                                id="is-default"
+                                checked={isDefault}
+                                onCheckedChange={setIsDefault}
+                            />
+                            <Label htmlFor="is-default" className="flex flex-col cursor-pointer">
+                                <span>Set as Default Journal</span>
+                                <span className="font-normal text-xs text-muted-foreground">This journal will be selected automatically when creating new entries.</span>
+                            </Label>
+                            <input type="hidden" name="isDefault" value={isDefault ? "on" : "off"} />
                         </div>
                     </div>
                     <DialogFooter>

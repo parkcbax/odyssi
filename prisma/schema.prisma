@@ -33,6 +33,7 @@ model Journal {
   color       String   @default("#718982") // Default to Sage Green
   icon        String?  // Emoji or icon name
   coverImage  String?
+  isDefault   Boolean  @default(false)
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   entries     Entry[]
