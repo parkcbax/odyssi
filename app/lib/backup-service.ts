@@ -81,11 +81,26 @@ export async function generateBackup(options: BackupOptions) {
     const imagesToAdd = new Set<string>()
 
     // From Journal Entries
+    // From Journal Entries
     for (const entry of entries) {
+        // 1. From Asset relation (if used)
         if (entry.images && entry.images.length > 0) {
             for (const image of entry.images) {
                 imagesToAdd.add(image.url)
             }
+        }
+
+        // 2. From Content JSON (Tiptap)
+        if (entry.content && (entry.content as any).type === 'doc') {
+            const extractImages = (node: any) => {
+                if (node.type === 'image' && node.attrs && node.attrs.src) {
+                    imagesToAdd.add(node.attrs.src)
+                }
+                if (node.content && Array.isArray(node.content)) {
+                    node.content.forEach(extractImages)
+                }
+            }
+            extractImages(entry.content)
         }
     }
 
