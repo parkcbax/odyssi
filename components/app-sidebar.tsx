@@ -9,7 +9,8 @@ import {
     MessageSquare,
     LogOut,
     Plus,
-    Archive
+    Archive,
+    Search
 } from "lucide-react"
 
 import {
@@ -50,6 +51,11 @@ const items = [
         title: "Insights",
         url: "/insights",
         icon: BarChart,
+    },
+    {
+        title: "Search",
+        url: "/search",
+        icon: Search,
     },
 ]
 
