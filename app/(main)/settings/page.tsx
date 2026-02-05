@@ -92,7 +92,11 @@ export default async function SettingsPage() {
                 </TabsContent>
 
                 <TabsContent value="backup" className="space-y-6">
-                    <BackupView journals={journals} />
+                    <BackupView
+                        journals={journals}
+                        initialAutoBackup={appConfig.enableAutoBackup}
+                        initialInterval={appConfig.autoBackupInterval}
+                    />
                 </TabsContent>
 
                 <TabsContent value="restore" className="space-y-6">
