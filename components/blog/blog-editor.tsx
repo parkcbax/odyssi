@@ -3,7 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import Image from '@tiptap/extension-image'
+import { CustomImage } from '@/components/tiptap/image-extension'
 import LinkExtension from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { createBlogPost, updateBlogPost } from '@/app/lib/actions'
 // ... (imports remain)
+import { ImageWithLoader } from "@/components/ui/image-with-loader"
 
 // ...
 
@@ -72,7 +73,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                 placeholder: 'Write your story...',
                 emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:pointer-events-none',
             }),
-            Image,
+            CustomImage,
             LinkExtension.configure({ openOnClick: false }),
             Underline,
             TaskList,
@@ -281,7 +282,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                             <div className="flex flex-col gap-3">
                                 {featuredImage && (
                                     <div className="relative w-full aspect-video rounded overflow-hidden border">
-                                        <img src={featuredImage} alt="Featured" className="object-cover w-full h-full" />
+                                        <ImageWithLoader src={featuredImage} alt="Featured" className="object-cover w-full h-full" containerClassName="h-full w-full" />
                                         <Button
                                             variant="destructive"
                                             size="icon"

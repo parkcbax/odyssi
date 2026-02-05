@@ -3,7 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import Image from '@tiptap/extension-image'
+import { CustomImage } from '@/components/tiptap/image-extension'
 import LinkExtension from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
@@ -89,7 +89,7 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                 placeholder: 'Write your thoughts...',
                 emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:pointer-events-none',
             }),
-            Image,
+            CustomImage,
             LinkExtension.configure({ openOnClick: false }),
             Underline,
             TaskList,

@@ -7,6 +7,7 @@ import { Plus, Calendar, MapPin, ChevronLeft, ImageIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
 import { JournalActions } from "@/components/journal-actions"
+import { ImageWithLoader } from "@/components/ui/image-with-loader"
 
 export default async function JournalDetailsPage({ params }: { params: Promise<{ journalId: string }> }) {
     const session = await auth()
@@ -103,10 +104,11 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                                             </div>
                                             {getFirstImage(entry.content) && (
                                                 <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md border bg-muted">
-                                                    <img
+                                                    <ImageWithLoader
                                                         src={getFirstImage(entry.content)!}
                                                         alt={entry.title}
                                                         className="h-full w-full object-cover transition-transform hover:scale-105"
+                                                        containerClassName="h-full w-full"
                                                     />
                                                 </div>
                                             )}

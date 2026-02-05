@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
+import { ImageWithLoader } from "@/components/ui/image-with-loader"
 
 interface TimelineListProps {
     entries: any[]
@@ -68,10 +69,11 @@ export function TimelineList({ entries }: TimelineListProps) {
                                                 </div>
                                                 {getFirstImage(entry.content) && (
                                                     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-muted">
-                                                        <img
+                                                        <ImageWithLoader
                                                             src={getFirstImage(entry.content)!}
                                                             alt={entry.title}
                                                             className="h-full w-full object-cover"
+                                                            containerClassName="h-full w-full"
                                                         />
                                                     </div>
                                                 )}
