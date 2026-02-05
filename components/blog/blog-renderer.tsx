@@ -53,7 +53,7 @@ export function BlogRenderer({ content }: { content: any }) {
         content: editorContent,
         editorProps: {
             attributes: {
-                class: 'prose prose-lg dark:prose-invert max-w-none',
+                class: 'prose prose-lg dark:prose-invert max-w-none prose-a:text-primary prose-a:no-underline hover:prose-a:underline',
             },
         },
     })

@@ -83,7 +83,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
         content: initialData?.content || '',
         editorProps: {
             attributes: {
-                class: 'prose prose-lg dark:prose-invert focus:outline-none max-w-none min-h-[300px]',
+                class: 'prose prose-lg dark:prose-invert focus:outline-none max-w-none min-h-[300px] prose-a:text-primary prose-a:no-underline hover:prose-a:underline',
             },
         },
     })
