@@ -19,11 +19,7 @@ export function ImageWithLoader({ className, containerClassName, alt, ...props }
                 </div>
             )}
             <img
-                className={cn(
-                    "transition-opacity duration-300",
-                    isLoading ? "opacity-0" : "opacity-100",
-                    className
-                )}
+                className={className}
                 alt={alt || "Image"}
                 onLoad={() => setIsLoading(false)}
                 {...props}
