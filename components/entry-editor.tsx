@@ -157,7 +157,9 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
 
         setIsUploading(true)
 
-        // Upload sequentially to maintain order and avoid overwhelming server
+        const urls: string[] = []
+
+        // Upload sequentially to maintain order
         for (let i = 0; i < files.length; i++) {
             const file = files[i]
             const formData = new FormData()
@@ -171,14 +173,22 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
 
                 const data = await response.json()
                 if (data.url) {
-                    // Try to insert image at current selection end
-                    editor.chain().focus().setImage({ src: data.url }).run()
+                    urls.push(data.url)
                 } else {
                     console.error("Upload failed for file:", file.name)
                 }
             } catch (error) {
                 console.error("Upload error:", error)
             }
+        }
+
+        if (urls.length > 0) {
+            // Insert all images at once
+            const content = urls.flatMap(url => [
+                { type: 'image', attrs: { src: url } },
+                { type: 'paragraph' }
+            ])
+            editor.chain().focus().insertContent(content).run()
         }
 
         setIsUploading(false)
