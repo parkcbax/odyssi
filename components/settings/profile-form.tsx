@@ -75,7 +75,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                         Update your account information.
                     </CardDescription>
                 </CardHeader>
-                <form action={dispatch}>
+                <form action={dispatch} className="flex flex-col gap-6">
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="name">Name</Label>
@@ -116,7 +116,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                         Ensure your account is using a long, random password to stay secure.
                     </CardDescription>
                 </CardHeader>
-                <form action={pwdDispatch}>
+                <form action={pwdDispatch} className="flex flex-col gap-6">
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="currentPassword">Current Password</Label>
