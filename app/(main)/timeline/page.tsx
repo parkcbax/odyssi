@@ -23,7 +23,8 @@ export default async function TimelinePage() {
         },
         include: {
             journal: true,
-            tags: true
+            tags: true,
+            images: true
         }
     })
 

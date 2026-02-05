@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Calendar } from "@/components/ui/calendar"
+import { Calendar, CalendarDayButton } from "@/components/ui/calendar"
 import { Card, CardContent } from "@/components/ui/card"
 import { format, isSameDay, startOfDay } from "date-fns"
 import Link from "next/link"
 import { MessageSquare } from "lucide-react"
 import { getFirstImage } from "@/lib/editor-utils"
 import { ImageWithLoader } from "@/components/ui/image-with-loader"
+import { cn } from "@/lib/utils"
 
 interface TimelineCalendarProps {
     entries: any[]
@@ -23,8 +24,30 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
     }, [date, entries])
 
     // Highlight dates with entries (normalized to start of day)
-    const datesWithEntries = useMemo(() => {
+    const entryDates = useMemo(() => {
         return entries.map(entry => startOfDay(new Date(entry.date)))
+    }, [entries])
+
+    // Map dates to their first image (if any)
+    const dateImageMap = useMemo(() => {
+        const map = new Map<string, string>()
+        entries.forEach(entry => {
+            const date = new Date(entry.date)
+            const dateKey = format(date, 'yyyy-MM-dd')
+            if (!map.has(dateKey)) {
+                // First check for attached images (from database relation)
+                if (entry.images && entry.images.length > 0) {
+                    map.set(dateKey, entry.images[0].url)
+                } else {
+                    // Fallback to embedded images in content
+                    const img = getFirstImage(entry.content)
+                    if (img) {
+                        map.set(dateKey, img)
+                    }
+                }
+            }
+        })
+        return map
     }, [entries])
 
     return (
@@ -36,10 +59,36 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
                     onSelect={setDate}
                     className="rounded-md border-0 w-full"
                     modifiers={{
-                        hasEntry: datesWithEntries
+                        hasEntry: entryDates
                     }}
                     modifiersClassNames={{
                         hasEntry: "font-black text-primary border-2 border-primary/50 bg-primary/5 rounded-md"
+                    }}
+                    components={{
+                        DayButton: (props: any) => {
+                            const { day, children, ...rest } = props
+                            const dateKey = format(day.date, 'yyyy-MM-dd')
+                            const imageUrl = dateImageMap.get(dateKey)
+
+                            return (
+                                <CalendarDayButton day={day} {...rest}>
+                                    {imageUrl && (
+                                        <div className="absolute inset-0 z-0 rounded-md overflow-hidden">
+                                            <ImageWithLoader
+                                                src={imageUrl}
+                                                alt=""
+                                                className="object-cover transition-transform group-hover:scale-110 duration-500"
+                                                containerClassName="absolute inset-0 z-[-1]"
+                                            />
+                                            <div className="absolute inset-0 bg-black/30" />
+                                        </div>
+                                    )}
+                                    <span className={cn("z-10 relative", imageUrl && "text-white font-bold drop-shadow-md")}>
+                                        {children}
+                                    </span>
+                                </CalendarDayButton>
+                            )
+                        }
                     }}
                 />
             </Card>
@@ -54,10 +103,10 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
                     </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-6">
                     {selectedDateEntries.length > 0 ? (
                         selectedDateEntries.map((entry) => (
-                            <Link key={entry.id} href={`/entries/${entry.id}`}>
+                            <Link key={entry.id} href={`/entries/${entry.id}`} className="block">
                                 <Card className="hover:bg-muted/50 transition-colors group cursor-pointer">
                                     <CardContent className="p-3 flex items-start gap-3">
                                         {entry.mood && (

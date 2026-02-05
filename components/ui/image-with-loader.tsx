@@ -3,12 +3,13 @@
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
-interface ImageWithLoaderProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface ImageWithLoaderProps extends Omit<React.ComponentProps<typeof Image>, 'onLoad'> {
     containerClassName?: string
 }
 
-export function ImageWithLoader({ className, containerClassName, alt, ...props }: ImageWithLoaderProps) {
+export function ImageWithLoader({ className, containerClassName, alt, src, ...props }: ImageWithLoaderProps) {
     const [isLoading, setIsLoading] = useState(true)
 
     return (
@@ -18,10 +19,13 @@ export function ImageWithLoader({ className, containerClassName, alt, ...props }
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
             )}
-            <img
+            <Image
+                src={src}
+                alt={alt}
                 className={className}
-                alt={alt || "Image"}
                 onLoad={() => setIsLoading(false)}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 {...props}
             />
         </div>
