@@ -123,12 +123,16 @@ export function AppSidebar({ enableBlogging }: AppSidebarProps) {
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
+                    import {handleSignOut} from "@/app/lib/actions"
+
+                    // ... (inside component)
+
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild tooltip="Sign Out">
-                            <Link href="/api/auth/signout">
+                            <button onClick={() => handleSignOut()}>
                                 <LogOut />
                                 <span>Sign Out</span>
-                            </Link>
+                            </button>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>

@@ -24,6 +24,10 @@ export async function authenticate(
     }
 }
 
+export async function handleSignOut() {
+    await signOut({ redirectTo: "/login" })
+}
+
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
