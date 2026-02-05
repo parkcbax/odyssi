@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Book, Lock, Sparkles } from "lucide-react"
 import { getAppConfig } from "@/app/lib/actions"
@@ -97,7 +98,9 @@ export default async function Home() {
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-14 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <Link className="flex items-center justify-center gap-2 font-bold text-xl" href="#">
-          <Book className="h-6 w-6 text-primary" />
+          <div className="relative h-8 w-8">
+            <Image src="/assets/odyssi_logo.png" alt="Odyssi Logo" fill className="object-contain" />
+          </div>
           <span>Odyssi</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">

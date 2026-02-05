@@ -1,6 +1,6 @@
 'use server'
 
-import { signIn } from "@/auth"
+import { signIn, signOut } from "@/auth"
 import { AuthError } from "next-auth"
 import { redirect } from "next/navigation"
 import { getExcerpt } from "@/app/lib/blog-utils"

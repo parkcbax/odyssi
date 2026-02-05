@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 
 const items = [
     {
@@ -58,6 +59,8 @@ interface AppSidebarProps {
     enableBlogging?: boolean
 }
 
+import { handleSignOut } from "@/app/lib/actions"
+
 export function AppSidebar({ enableBlogging }: AppSidebarProps) {
     const pathname = usePathname()
 
@@ -73,7 +76,12 @@ export function AppSidebar({ enableBlogging }: AppSidebarProps) {
     return (
         <Sidebar collapsible="icon">
             <SidebarHeader className="p-4 border-b">
-                <h1 className="text-xl font-bold tracking-tight text-primary">Odyssi</h1>
+                <Link href="/dashboard" className="flex items-center gap-2">
+                    <div className="relative h-8 w-8">
+                        <Image src="/assets/odyssi_logo.png" alt="Odyssi Logo" fill className="object-contain" />
+                    </div>
+                    <span className="text-xl font-bold tracking-tight text-primary">Odyssi</span>
+                </Link>
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
@@ -123,10 +131,6 @@ export function AppSidebar({ enableBlogging }: AppSidebarProps) {
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                    import {handleSignOut} from "@/app/lib/actions"
-
-                    // ... (inside component)
-
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild tooltip="Sign Out">
                             <button onClick={() => handleSignOut()}>
