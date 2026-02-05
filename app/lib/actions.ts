@@ -427,8 +427,9 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
             })
         }
 
-        revalidatePath("/")
-        revalidatePath("/settings")
+        revalidatePath("/", "layout") // Root layout
+        revalidatePath("/settings", "layout") // Settings page layout (MainLayout)
+        revalidatePath("/dashboard", "layout") // Dashboard layout if needed
         return { message: "Success" }
     } catch (error) {
         console.error("Failed to update app config:", error)
