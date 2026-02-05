@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Trash2, Edit2 } from "lucide-react"
+import { Trash2, Edit2, FileDown } from "lucide-react"
 import { deleteEntry } from "@/app/lib/actions"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -40,8 +40,38 @@ export function EntryActions({ entryId, journalId, title }: EntryActionsProps) {
         }
     }
 
+    const handleSavePDF = () => {
+        // We defer to the browser's native print dialog which produces better PDFs (vectors)
+        // and doesn't crash on large content.
+        // The CSS @media print rule in globals.css handles hiding the UI.
+
+        const element = document.getElementById('entry-printable-content')
+        if (!element) return
+
+        // Create a dedicated print wrapper to isolate content
+        // This wrapper is styled in globals.css to be the only visible element during print
+        const clone = element.cloneNode(true) as HTMLElement
+        const wrapper = document.createElement('div')
+        wrapper.id = 'entry-printable-content-wrapper'
+        wrapper.appendChild(clone)
+        document.body.appendChild(wrapper)
+
+        // Trigger print
+        window.print()
+
+        // Clean up after a short delay to allow print rendering to initialize
+        // (Note: window.print() is blocking in many browsers, but not all)
+        setTimeout(() => {
+            document.body.removeChild(wrapper)
+        }, 500)
+    }
+
     return (
         <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleSavePDF}>
+                <FileDown className="h-4 w-4 mr-2" />
+                Save PDF
+            </Button>
             <Button asChild variant="outline" size="sm">
                 <Link href={`/entries/${entryId}/edit`}>
                     <Edit2 className="h-4 w-4 mr-2" />
