@@ -68,7 +68,7 @@ export default async function PublicEntryPage({ params }: { params: Promise<{ sl
 
                 {/* Simple Footer */}
                 <footer className="mt-16 pt-8 border-t text-center text-sm text-muted-foreground">
-                    <p>Published via Odyssi</p>
+                    <p>Published via <a href="https://odys.si" target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-4">Odyssi</a></p>
                 </footer>
             </div>
         </main>

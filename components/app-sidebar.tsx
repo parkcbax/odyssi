@@ -61,15 +61,21 @@ interface AppSidebarProps {
     enableBlogging?: boolean
     isAdmin?: boolean
     enableMultiUser?: boolean
+    enableUserBlogging?: boolean
 }
 
 import { handleSignOut } from "@/app/lib/actions"
 
-export function AppSidebar({ enableBlogging, isAdmin, enableMultiUser }: AppSidebarProps) {
+export function AppSidebar({ enableBlogging, isAdmin, enableMultiUser, enableUserBlogging }: AppSidebarProps) {
     const pathname = usePathname()
 
     const navItems = [...items]
-    if (enableBlogging) {
+    // Show Blog if enabled globally AND (user is admin OR user blogging is enabled)
+    // Note: If isAdmin is undefined (e.g. loading), we default to false for security, 
+    // but typically layout passes correct value.
+    const canBlog = isAdmin || enableUserBlogging
+
+    if (enableBlogging && canBlog) {
         navItems.push({
             title: "Blog",
             url: "/dashboard/blog",

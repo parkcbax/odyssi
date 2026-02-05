@@ -24,10 +24,18 @@ interface SharedEntry {
     date: Date
     journal: {
         title: string
+        user?: {
+            name: string | null
+            email: string
+        }
     }
 }
 
-export function SharedEntriesList() {
+interface SharedEntriesListProps {
+    isAdmin?: boolean
+}
+
+export function SharedEntriesList({ isAdmin }: SharedEntriesListProps) {
     const [entries, setEntries] = useState<SharedEntry[]>([])
     const [loading, setLoading] = useState(true)
     const router = useRouter()
@@ -35,6 +43,7 @@ export function SharedEntriesList() {
     const fetchEntries = async () => {
         setLoading(true)
         const data = await getSharedEntries()
+        // @ts-ignore
         setEntries(data)
         setLoading(false)
     }
@@ -76,6 +85,7 @@ export function SharedEntriesList() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Entry Title</TableHead>
+                        {isAdmin && <TableHead>Owner</TableHead>}
                         <TableHead>Journal</TableHead>
                         <TableHead>Public Link</TableHead>
                         <TableHead>Expires</TableHead>
@@ -86,6 +96,11 @@ export function SharedEntriesList() {
                     {entries.map((entry) => (
                         <TableRow key={entry.id}>
                             <TableCell className="font-medium">{entry.title}</TableCell>
+                            {isAdmin && (
+                                <TableCell className="text-muted-foreground">
+                                    {entry.journal.user?.name || entry.journal.user?.email || "Unknown"}
+                                </TableCell>
+                            )}
                             <TableCell className="text-muted-foreground">{entry.journal.title}</TableCell>
                             <TableCell>
                                 <a

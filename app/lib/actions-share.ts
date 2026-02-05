@@ -24,7 +24,9 @@ export async function updateEntrySharing(entryId: string, data: z.infer<typeof u
             include: { journal: true }
         })
 
-        if (!entry || entry.journal.userId !== session.user.id) {
+        const userIsAdmin = isAdmin(session.user.email)
+
+        if (!entry || (entry.journal.userId !== session.user.id && !userIsAdmin)) {
             return { message: "Unauthorized" }
         }
 
@@ -104,18 +106,27 @@ export async function verifyEntryPassword(slug: string, password: string) {
     }
 }
 
+import { isAdmin } from "@/lib/auth-utils"
+
 export async function getSharedEntries() {
     const session = await auth()
     if (!session?.user?.id) return []
 
+    const userIsAdmin = isAdmin(session.user.email)
+
     try {
+        const whereClause: any = {
+            isPublic: true
+        }
+
+        if (!userIsAdmin) {
+            whereClause.journal = {
+                userId: session.user.id
+            }
+        }
+
         const entries = await prisma.entry.findMany({
-            where: {
-                isPublic: true,
-                journal: {
-                    userId: session.user.id
-                }
-            },
+            where: whereClause,
             select: {
                 id: true,
                 title: true,
@@ -124,7 +135,13 @@ export async function getSharedEntries() {
                 date: true,
                 journal: {
                     select: {
-                        title: true
+                        title: true,
+                        user: {
+                            select: {
+                                name: true,
+                                email: true
+                            }
+                        }
                     }
                 }
             },

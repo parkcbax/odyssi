@@ -86,6 +86,7 @@ export default async function SettingsPage() {
                         redirectHomeToLogin={appConfig.redirectHomeToLogin}
                         enableBlogging={appConfig.enableBlogging}
                         enableMultiUser={appConfig.enableMultiUser}
+                        enableUserBlogging={appConfig.enableUserBlogging}
                     />
                 </TabsContent>
 
@@ -97,7 +98,7 @@ export default async function SettingsPage() {
                                 Manage entries that are currently accessible to the public.
                             </p>
                         </div>
-                        <SharedEntriesList />
+                        <SharedEntriesList isAdmin={isUserAdmin} />
                     </div>
                 </TabsContent>
 

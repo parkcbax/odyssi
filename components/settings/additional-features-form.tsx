@@ -13,9 +13,10 @@ interface AdditionalFeaturesFormProps {
     redirectHomeToLogin: boolean
     enableBlogging: boolean
     enableMultiUser: boolean
+    enableUserBlogging: boolean
 }
 
-export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, enableMultiUser }: AdditionalFeaturesFormProps) {
+export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, enableMultiUser, enableUserBlogging }: AdditionalFeaturesFormProps) {
     const [state, formAction, isPending] = useActionState(updateAppFeatures, null)
     const router = useRouter()
 
@@ -77,6 +78,23 @@ export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, en
                             defaultChecked={enableMultiUser}
                         />
                     </div>
+
+                    {enableMultiUser && (
+                        <div className="flex items-center justify-between space-x-2 pl-6 border-l-2">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="enableUserBlogging" className="text-base">Allow Users Create Blog Post</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    If enabled, registered users (non-admins) can also create blog posts.
+                                </p>
+                            </div>
+                            <Switch
+                                id="enableUserBlogging"
+                                name="enableUserBlogging"
+                                defaultChecked={enableUserBlogging}
+                            />
+                        </div>
+                    )}
+
                     <Button type="submit" disabled={isPending}>
                         {isPending ? "Saving..." : "Save Changes"}
                     </Button>

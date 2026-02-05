@@ -19,6 +19,7 @@ export default async function MainLayout({
                 enableBlogging={config.enableBlogging}
                 isAdmin={isUserAdmin}
                 enableMultiUser={config.enableMultiUser}
+                enableUserBlogging={config.enableUserBlogging}
             />
             <main className="w-full">
                 <div className="p-4">

@@ -403,7 +403,6 @@ export async function updatePassword(
     return { message: "Success" }
 }
 
-// App Config Actions
 export async function getAppConfig() {
     const config = await prisma.appConfig.findFirst()
     if (!config) {
@@ -411,7 +410,8 @@ export async function getAppConfig() {
             data: {
                 redirectHomeToLogin: false,
                 enableBlogging: false,
-                enableMultiUser: false
+                enableMultiUser: false,
+                enableUserBlogging: false
             }
         })
     }
@@ -426,6 +426,7 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
     const enableBlogging = formData.get("enableBlogging") === "on"
     const enableAutoBackup = formData.get("enableAutoBackup") === "on"
     const enableMultiUser = formData.get("enableMultiUser") === "on"
+    const enableUserBlogging = formData.get("enableUserBlogging") === "on"
     const autoBackupInterval = formData.get("autoBackupInterval") as string || "1Week"
 
     try {
@@ -435,11 +436,11 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
         if (id) {
             await prisma.appConfig.update({
                 where: { id },
-                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, autoBackupInterval }
+                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, enableUserBlogging, autoBackupInterval }
             })
         } else {
             await prisma.appConfig.create({
-                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, autoBackupInterval }
+                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, enableUserBlogging, autoBackupInterval }
             })
         }
 
@@ -467,6 +468,14 @@ const CreateBlogPostSchema = z.object({
 export async function createBlogPost(prevState: any, formData: FormData) {
     const session = await auth()
     if (!session?.user?.id) return { message: "Unauthorized" }
+
+    // Check permissions
+    const config = await getAppConfig()
+    const userIsAdmin = isAdmin(session.user.email)
+
+    if (!userIsAdmin && !config.enableUserBlogging) {
+        return { message: "You do not have permission to create blog posts." }
+    }
 
     const validatedFields = CreateBlogPostSchema.safeParse({
         title: formData.get("title"),
@@ -545,6 +554,17 @@ export async function updateBlogPost(prevState: any, formData: FormData) {
     const session = await auth()
     if (!session?.user?.id) return { message: "Unauthorized" }
 
+    // Check permissions (Deleting/Updating own posts should technically be allowed if they created them, 
+    // but if the permission is REVOKED, maybe they shouldn't be able to edit anymore? 
+    // Usually "create" permission implies "manage own". 
+    // Let's be strict: if feature is disabled, no blogging actions for non-admins.)
+    const config = await getAppConfig()
+    const userIsAdmin = isAdmin(session.user.email)
+
+    if (!userIsAdmin && !config.enableUserBlogging) {
+        return { message: "You do not have permission to manage blog posts." }
+    }
+
     const validatedFields = UpdateBlogPostSchema.safeParse({
         id: formData.get("id"),
         title: formData.get("title"),
@@ -603,6 +623,13 @@ export async function updateBlogPost(prevState: any, formData: FormData) {
 export async function deleteBlogPost(id: string) {
     const session = await auth()
     if (!session?.user?.id) return { message: "Unauthorized" }
+
+    const config = await getAppConfig()
+    const userIsAdmin = isAdmin(session.user.email)
+
+    if (!userIsAdmin && !config.enableUserBlogging) {
+        return { message: "You do not have permission to delete blog posts." }
+    }
 
     try {
         await prisma.blogPost.delete({
