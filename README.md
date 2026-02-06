@@ -12,6 +12,15 @@ Odyssi is a minimalist, self-hosted sanctuary for your memories. Private, secure
 - **Insights Dashboard:** diverse analytics including streaks and mood tracking.
 - **Blogging:** Optional public blog to share selected thoughts with the world.
 
+## Screenshots
+
+<p align="center">
+  <img src="public/assets/screenshot1.png" alt="Odyssi Screenshot 1" width="32%" />
+  <img src="public/assets/screenshot2.png" alt="Odyssi Screenshot 2" width="32%" />
+  <img src="public/assets/screenshot3.png" alt="Odyssi Screenshot 3" width="32%" />
+</p>
+
+
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router)
