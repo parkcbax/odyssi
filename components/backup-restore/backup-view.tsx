@@ -14,9 +14,11 @@ import { getAppConfig, updateAppFeatures } from "@/app/lib/actions"
 
 interface BackupViewProps {
     journals: { id: string, title: string }[]
+    initialAutoBackup: boolean
+    initialInterval: string
 }
 
-export function BackupView({ journals }: BackupViewProps) {
+export function BackupView({ journals, initialAutoBackup, initialInterval }: BackupViewProps) {
     const [backupType, setBackupType] = useState<"EVERYTHING" | "JOURNAL">("EVERYTHING")
     const [selectedJournal, setSelectedJournal] = useState<string>("")
     const [splitType, setSplitType] = useState<"SINGLE" | "MULTIPART">("SINGLE")
@@ -26,8 +28,8 @@ export function BackupView({ journals }: BackupViewProps) {
     const [progress, setProgress] = useState(0)
 
     // Auto Backup State
-    const [enableAutoBackup, setEnableAutoBackup] = useState(false)
-    const [autoBackupInterval, setAutoBackupInterval] = useState("1Week")
+    const [enableAutoBackup, setEnableAutoBackup] = useState(initialAutoBackup)
+    const [autoBackupInterval, setAutoBackupInterval] = useState(initialInterval)
     const [isSavingSettings, setIsSavingSettings] = useState(false)
 
     useEffect(() => {

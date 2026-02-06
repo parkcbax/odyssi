@@ -97,7 +97,7 @@ export function TimelineList({ entries }: TimelineListProps) {
 
                                             {entry.tags.length > 0 && (
                                                 <div className="mt-3 flex flex-wrap gap-1">
-                                                    {entry.tags.map(tag => (
+                                                    {entry.tags.map((tag: { id: string; name: string }) => (
                                                         <span key={tag.id} className="text-[10px] text-muted-foreground italic">
                                                             #{tag.name}
                                                         </span>

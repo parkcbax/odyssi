@@ -67,8 +67,8 @@ export function ShareEntryDialog({
         const result = await updateEntrySharing(entryId, {
             isPublic,
             publicSlug: slug || undefined,
-            publicPassword: enablePassword ? password : null,
-            publicExpiresAt: enableExpiration && expiresAt ? new Date(expiresAt).toISOString() : null
+            publicPassword: enablePassword ? password : undefined,
+            publicExpiresAt: enableExpiration && expiresAt ? new Date(expiresAt).toISOString() : undefined
         })
 
         if (result.message === "Success") {

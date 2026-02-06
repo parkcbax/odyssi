@@ -18,7 +18,13 @@ export default async function EditBlogPostPage({ params }: { params: { slug: str
     return (
         <div className="max-w-4xl mx-auto py-8 px-4">
             <h1 className="text-3xl font-bold mb-8">Edit Blog Post</h1>
-            <BlogEditor initialData={post} />
+            <BlogEditor initialData={{
+                ...post,
+                category: post.category || undefined,
+                excerpt: post.excerpt || undefined,
+                featuredImage: post.featuredImage || undefined,
+                keywords: post.keywords || undefined
+            }} />
         </div>
     )
 }

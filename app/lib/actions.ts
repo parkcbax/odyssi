@@ -71,11 +71,13 @@ export async function createJournal(
     const { title, description, color, icon, isDefault } = validatedFields.data
     const isDefaultBool = isDefault === "on"
 
+    const userId = session.user.id
+
     try {
         await prisma.$transaction(async (tx) => {
             if (isDefaultBool) {
                 await tx.journal.updateMany({
-                    where: { userId: session.user.id },
+                    where: { userId },
                     data: { isDefault: false }
                 })
             }
@@ -87,7 +89,7 @@ export async function createJournal(
                     color: color || "#718982",
                     icon,
                     isDefault: isDefaultBool,
-                    userId: session.user.id,
+                    userId,
                 },
             })
         })
@@ -135,17 +137,19 @@ export async function updateJournal(
     const { id, title, description, color, icon, isDefault } = validatedFields.data
     const isDefaultBool = isDefault === "on"
 
+    const userId = session.user.id
+
     try {
         await prisma.$transaction(async (tx) => {
             if (isDefaultBool) {
                 await tx.journal.updateMany({
-                    where: { userId: session.user.id },
+                    where: { userId },
                     data: { isDefault: false }
                 })
             }
 
             await tx.journal.update({
-                where: { id, userId: session.user.id },
+                where: { id, userId },
                 data: { title, description, color, icon, isDefault: isDefaultBool }
             })
         })
