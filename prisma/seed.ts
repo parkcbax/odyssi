@@ -1,27 +1,10 @@
-import { PrismaClient } from '@prisma/client'
-import { Pool } from 'pg'
-import { PrismaPg } from '@prisma/adapter-pg'
-
-const connectionString = process.env.DATABASE_URL
-const pool = new Pool({ connectionString })
-const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({ adapter })
+import { seedAdminUser } from '../lib/seed-utils'
+import { prisma } from '../lib/prisma'
 
 async function main() {
-    const admin = await prisma.user.upsert({
-        where: { email: 'admin@odyssi.com' },
-        update: {
-            passwordHash: 'odyssi'
-        },
-        create: {
-            email: 'admin@odyssi.com',
-            name: 'Admin Traveler',
-            passwordHash: 'odyssi',
-            id: 'dev-admin'
-        },
-    })
-    console.log('Admin user seeded:', admin)
+    await seedAdminUser()
 }
+
 main()
     .then(async () => {
         await prisma.$disconnect()
@@ -31,3 +14,4 @@ main()
         await prisma.$disconnect()
         process.exit(1)
     })
+
