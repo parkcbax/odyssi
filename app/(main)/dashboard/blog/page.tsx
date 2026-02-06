@@ -5,6 +5,8 @@ import Link from "next/link"
 import { Plus, Trash2, Edit, ExternalLink } from "lucide-react"
 import { deleteBlogPost } from "@/app/lib/actions"
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardBlogPage() {
     const session = await auth()
     if (!session?.user?.id) return null

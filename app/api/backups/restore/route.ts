@@ -75,14 +75,21 @@ export async function POST(req: NextRequest) {
         await mkdir(uploadDir, { recursive: true })
 
         // Extract "uploads/" folder contents
-        zipEntries.forEach(entry => {
+        // Extract "uploads/" folder contents
+        // Manual extraction to avoid EPERM: chmod errors on Docker volumes
+        for (const entry of zipEntries) {
             if (entry.entryName.startsWith("uploads/") && !entry.isDirectory) {
                 const targetName = entry.entryName.split('/').pop()
                 if (targetName) {
-                    zip.extractEntryTo(entry, uploadDir, false, true)
+                    try {
+                        const content = entry.getData()
+                        await writeFile(join(uploadDir, targetName), content)
+                    } catch (e) {
+                        console.error(`Failed to extract ${targetName}:`, e)
+                    }
                 }
             }
-        })
+        }
 
         // 3. Database Restore
         // 3. Database Restore

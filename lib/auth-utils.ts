@@ -4,9 +4,9 @@
  */
 export function isAdmin(email?: string | null): boolean {
     if (!email) return false
-    const adminEmail = process.env.ADMIN_EMAIL
+    const adminEmails = (process.env.ADMIN_EMAIL || "").split(",").map(e => e.trim())
     // If no admin email is configured, no one is admin
-    if (!adminEmail) return false
+    if (adminEmails.length === 0) return false
 
-    return email === adminEmail
+    return adminEmails.includes(email)
 }

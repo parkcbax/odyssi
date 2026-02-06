@@ -6,6 +6,8 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Book } from "lucide-react"
 
+export const dynamic = 'force-dynamic'
+
 export default async function JournalsPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")

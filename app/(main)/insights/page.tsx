@@ -2,6 +2,8 @@ import { getInsightsData } from "@/app/lib/actions-insights"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Flame, BookOpen, PenTool, LayoutTemplate, Activity } from "lucide-react"
 
+export const dynamic = 'force-dynamic'
+
 export default async function InsightsPage() {
     const data = await getInsightsData()
 
@@ -107,23 +109,31 @@ export default async function InsightsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-end justify-between h-[200px] mt-4 px-2">
-                            {data.dayDistribution.map((item) => {
-                                const maxCount = Math.max(...data.dayDistribution.map(d => d.count))
-                                const heightPercentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0
+                            <div className="flex items-end justify-between h-[200px] mt-4 px-2">
+                                {data.totalEntries > 0 ? (
+                                    data.dayDistribution.map((item) => {
+                                        const maxCount = Math.max(...data.dayDistribution.map(d => d.count))
+                                        const heightPercentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0
 
-                                return (
-                                    <div key={item.day} className="flex flex-col items-center gap-2 group">
-                                        <div className="relative w-8 bg-secondary rounded-t-sm h-full flex items-end overflow-hidden group-hover:bg-secondary/80 transition-colors">
-                                            <div
-                                                className="w-full bg-primary/80 group-hover:bg-primary transition-all duration-500"
-                                                style={{ height: `${heightPercentage}%` }}
-                                            />
-                                        </div>
-                                        <span className="text-xs text-muted-foreground font-medium">{item.day}</span>
-                                        <span className="sr-only">{item.count} entries</span>
+                                        return (
+                                            <div key={item.day} className="flex flex-col items-center gap-2 group">
+                                                <div className="relative w-8 bg-secondary rounded-t-sm h-full flex items-end overflow-hidden group-hover:bg-secondary/80 transition-colors">
+                                                    <div
+                                                        className="w-full bg-primary/80 group-hover:bg-primary transition-all duration-500"
+                                                        style={{ height: `${heightPercentage}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs text-muted-foreground font-medium">{item.day}</span>
+                                                <span className="sr-only">{item.count} entries</span>
+                                            </div>
+                                        )
+                                    })
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                                        No writing activity recorded yet.
                                     </div>
-                                )
-                            })}
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

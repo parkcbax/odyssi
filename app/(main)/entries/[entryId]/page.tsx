@@ -7,6 +7,8 @@ import { ChevronLeft, Calendar, MapPin, Tag, Edit } from "lucide-react"
 import { EntryViewer } from "@/components/entry-viewer"
 import { EntryActions } from "@/components/entry-actions"
 
+export const dynamic = 'force-dynamic'
+
 export default async function EntryPage({ params }: { params: Promise<{ entryId: string }> }) {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")

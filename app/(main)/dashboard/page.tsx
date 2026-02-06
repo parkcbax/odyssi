@@ -5,6 +5,8 @@ import { PromptCard } from "@/components/dashboard/prompt-card"
 import { OnThisDayCard } from "@/components/dashboard/on-this-day-card"
 import { RecentEntriesList } from "@/components/dashboard/recent-entries-list"
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")

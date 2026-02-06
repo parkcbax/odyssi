@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { EntryEditor } from "@/components/entry-editor"
 
+export const dynamic = 'force-dynamic'
+
 export default async function NewEntryPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")

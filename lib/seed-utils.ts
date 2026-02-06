@@ -2,7 +2,8 @@ import { prisma } from './prisma'
 
 export async function seedAdminUser() {
     try {
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@odyssi.com'
+        const adminEmails = (process.env.ADMIN_EMAIL || 'admin@odyssi.com').split(',')
+        const adminEmail = adminEmails[0].trim()
 
         // Check if admin already exists to avoid unnecessary writes
         const existingAdmin = await prisma.user.findUnique({

@@ -4,6 +4,8 @@ import { getAppConfig } from "@/app/lib/actions"
 import { auth } from "@/auth"
 import { isAdmin } from "@/lib/auth-utils"
 
+export const dynamic = 'force-dynamic'
+
 export default async function MainLayout({
     children,
 }: Readonly<{

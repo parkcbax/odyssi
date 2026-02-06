@@ -13,6 +13,8 @@ import { getAppConfig } from "@/app/lib/actions"
 
 import { isAdmin } from "@/lib/auth-utils"
 
+export const dynamic = 'force-dynamic'
+
 export default async function SettingsPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")

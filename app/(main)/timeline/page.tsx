@@ -7,6 +7,8 @@ import { List, Calendar as CalendarIcon } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 
+export const dynamic = 'force-dynamic'
+
 export default async function TimelinePage() {
     const session = await auth()
     if (!session?.user?.id) return null

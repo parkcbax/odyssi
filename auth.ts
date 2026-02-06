@@ -28,22 +28,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 })
 
                 if (!user) {
-                    // For MVP development, if no user exists, let's create one magically ONLY if it says "admin@odyssi.com" (Development convenience)
-                    // In a real app, you'd have a sign-up flow.
-                    // TODO: REMOVE THIS IN PRODUCTION
-                    if (email === "admin@odyssi.com" && password === "odyssi") {
-                        // Ensure this dev user actually exists in the DB so foreign keys work
-                        const user = await prisma.user.upsert({
-                            where: { email: "admin@odyssi.com" },
-                            update: {},
-                            create: {
-                                id: "dev-admin",
-                                name: "Admin Traveler",
-                                email: "admin@odyssi.com",
-                            }
-                        })
-                        return user
-                    }
                     throw new Error("User not found.")
                 }
 

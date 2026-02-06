@@ -9,6 +9,8 @@ import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
 import { JournalActions } from "@/components/journal-actions"
 import { ImageWithLoader } from "@/components/ui/image-with-loader"
 
+export const dynamic = 'force-dynamic'
+
 export default async function JournalDetailsPage({ params }: { params: Promise<{ journalId: string }> }) {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
