@@ -65,10 +65,13 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
                                 {new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                             </div>
                             {entry.locationName && (
-                                <div className="flex items-center gap-1">
+                                <Link
+                                    href={`/timeline?location=${encodeURIComponent(entry.locationName)}`}
+                                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                                >
                                     <MapPin className="h-4 w-4" />
                                     {entry.locationName}
-                                </div>
+                                </Link>
                             )}
                             {entry.mood && (
                                 <div className="flex items-center gap-1">
@@ -80,9 +83,13 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
                                     <Tag className="h-4 w-4" />
                                     <div className="flex gap-1">
                                         {entry.tags.map(tag => (
-                                            <span key={tag.id} className="bg-muted px-1.5 py-0.5 rounded-md text-xs">
+                                            <Link
+                                                key={tag.id}
+                                                href={`/timeline?tag=${encodeURIComponent(tag.name)}`}
+                                                className="bg-muted px-1.5 py-0.5 rounded-md text-xs hover:bg-primary/20 hover:text-primary transition-colors"
+                                            >
                                                 {tag.name}
-                                            </span>
+                                            </Link>
                                         ))}
                                     </div>
                                 </div>

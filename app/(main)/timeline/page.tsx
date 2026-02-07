@@ -1,6 +1,7 @@
 import { TimelineList } from "@/components/timeline/timeline-list"
 import { TimelineCalendar } from "@/components/timeline/timeline-calendar"
 import { Suspense } from "react"
+import Link from "next/link"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { List, Calendar as CalendarIcon } from "lucide-react"
@@ -9,16 +10,34 @@ import { auth } from "@/auth"
 
 export const dynamic = 'force-dynamic'
 
-export default async function TimelinePage() {
+export default async function TimelinePage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     const session = await auth()
     if (!session?.user?.id) return null
+
+    const resolvedParams = await searchParams
+    const tag = typeof resolvedParams.tag === 'string' ? resolvedParams.tag : undefined
+    const location = typeof resolvedParams.location === 'string' ? resolvedParams.location : undefined
 
     // Fetch entries once for both views
     const entries = await prisma.entry.findMany({
         where: {
             journal: {
                 userId: session.user.id
-            }
+            },
+            ...(tag && {
+                tags: {
+                    some: {
+                        name: tag
+                    }
+                }
+            }),
+            ...(location && {
+                locationName: location
+            })
         },
         orderBy: {
             date: 'desc'
@@ -36,6 +55,16 @@ export default async function TimelinePage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Timeline</h1>
                     <p className="text-muted-foreground">Your journey through time.</p>
+                    {(tag || location) && (
+                        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>
+                                Filtering by {tag ? `tag: ${tag}` : `location: ${location}`}
+                            </span>
+                            <Link href="/timeline" className="text-primary hover:underline">
+                                Clear filter
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </div>
 

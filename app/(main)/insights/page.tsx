@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Flame, BookOpen, PenTool, Activity, Tag, MapPin } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import Link from "next/link"
 
 export default function InsightsPage() {
     const [data, setData] = useState<InsightData | null>(null)
@@ -197,13 +198,17 @@ export default function InsightsPage() {
                         <div className="space-y-4">
                             {data.tagsDistribution.length > 0 ? (
                                 data.tagsDistribution.map((item) => (
-                                    <div key={item.tag} className="flex items-center justify-between">
+                                    <Link
+                                        key={item.tag}
+                                        href={`/timeline?tag=${encodeURIComponent(item.tag)}`}
+                                        className="flex items-center justify-between group cursor-pointer hover:bg-muted/50 p-1 rounded-md transition-colors"
+                                    >
                                         <div className="flex items-center gap-2">
                                             <div className="h-2 w-2 rounded-full bg-primary" />
-                                            <span className="font-medium">{item.tag}</span>
+                                            <span className="font-medium group-hover:text-primary transition-colors">{item.tag}</span>
                                         </div>
                                         <span className="text-sm text-muted-foreground">{item.count}</span>
-                                    </div>
+                                    </Link>
                                 ))
                             ) : (
                                 <p className="text-sm text-muted-foreground text-center py-8">No tags used yet.</p>
@@ -224,13 +229,17 @@ export default function InsightsPage() {
                         <div className="space-y-4">
                             {data.locationDistribution.length > 0 ? (
                                 data.locationDistribution.map((item) => (
-                                    <div key={item.location} className="flex items-center justify-between">
+                                    <Link
+                                        key={item.location}
+                                        href={`/timeline?location=${encodeURIComponent(item.location)}`}
+                                        className="flex items-center justify-between group cursor-pointer hover:bg-muted/50 p-1 rounded-md transition-colors"
+                                    >
                                         <div className="flex items-center gap-2">
                                             <div className="h-2 w-2 rounded-full bg-orange-500" />
-                                            <span className="font-medium">{item.location}</span>
+                                            <span className="font-medium group-hover:text-primary transition-colors">{item.location}</span>
                                         </div>
                                         <span className="text-sm text-muted-foreground">{item.count}</span>
-                                    </div>
+                                    </Link>
                                 ))
                             ) : (
                                 <p className="text-sm text-muted-foreground text-center py-8">No location data available yet.</p>
