@@ -148,14 +148,6 @@ export function AppSidebar({ enableBlogging, isAdmin, enableMultiUser, enableUse
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild tooltip="Feedback" isActive={pathname?.startsWith("/feedback")}>
-                            <Link href="/feedback">
-                                <MessageSquare />
-                                <span>Feedback</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
                         <SidebarMenuButton asChild tooltip="Sign Out">
                             <button onClick={() => handleSignOut()}>
                                 <LogOut />
