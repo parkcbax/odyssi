@@ -1,11 +1,12 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Book, Lock, Sparkles } from "lucide-react"
+import { ArrowRight, Book, Lock, Sparkles, Trash2, Archive } from "lucide-react"
 import { getAppConfig } from "@/app/lib/actions"
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
+import { cn } from "@/lib/utils"
 
 // Helper to extract text from Tiptap JSON
 function getExcerpt(content: any): string {
@@ -115,25 +116,42 @@ export default async function Home() {
         </nav>
       </header>
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-background">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="flex flex-col items-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  Your Thoughts, <span className="text-primary">Unbound</span>.
+        <section className="relative w-full py-20 md:py-32 lg:py-48 overflow-hidden bg-background">
+          {/* Aurora Background Elements */}
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute top-[10%] -right-[5%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[100px] animate-pulse [animation-duration:8s]" />
+            <div className="absolute -bottom-[10%] left-[10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px] animate-pulse [animation-duration:12s]" />
+          </div>
+
+          {/* Subtle Grid Pattern */}
+          <div className="absolute inset-0 z-0 opacity-10 pointer-events-none"
+            style={{
+              backgroundImage: `radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0)`,
+              backgroundSize: '40px 40px'
+            }} />
+
+          <div className="container relative z-10 px-4 md:px-6 mx-auto">
+            <div className="flex flex-col items-center space-y-8 text-center">
+              <div className="space-y-4 max-w-[900px] animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out">
+                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl/none lg:leading-[1.1]">
+                  Your Thoughts, <span className="text-primary relative inline-block whitespace-nowrap">
+                    Unbound
+                    <span className="absolute -bottom-2 left-0 w-full h-1.5 bg-primary/30 rounded-full" />
+                  </span>.
                 </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-2xl/relaxed font-medium">
                   A minimalist, self-hosted sanctuary for your memories. Private, secure, and beautiful.
                 </p>
               </div>
-              <div className="space-x-4">
+              <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 fill-mode-both">
                 <Link href="/login">
-                  <Button size="lg" className="gap-2">
-                    Start Writing <ArrowRight className="h-4 w-4" />
+                  <Button size="lg" className="h-14 px-8 text-lg font-semibold gap-2 shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-1 active:scale-95">
+                    Start Writing <ArrowRight className="h-5 w-5" />
                   </Button>
                 </Link>
                 <Link href="https://github.com/parkcbax/odyssi" target="_blank">
-                  <Button variant="outline" size="lg">
+                  <Button variant="outline" size="lg" className="h-14 px-8 text-lg font-medium transition-all hover:bg-muted/50 active:scale-95 backdrop-blur-sm bg-background/30 border-2">
                     GitHub
                   </Button>
                 </Link>
@@ -169,54 +187,75 @@ export default async function Home() {
           </section>
         )}
 
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-secondary/20">
+        <section className="w-full py-24 md:py-32 bg-secondary/10">
           <div className="container px-4 md:px-6 mx-auto">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="flex flex-col items-center space-y-2 border-border p-4 rounded-lg">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Lock className="h-6 w-6 text-primary" />
+            <div className="text-center space-y-4 mb-16 animate-in fade-in slide-in-from-bottom-6 duration-700">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+                Built for your <span className="text-primary">Digital Wellbeing</span>
+              </h2>
+              <p className="text-muted-foreground md:text-xl max-w-[800px] mx-auto">
+                Odyssi combines modern design with ultimate privacy, giving you a beautiful sanctuary for your thoughts.
+              </p>
+            </div>
+
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  title: "Private & Secure",
+                  description: "Your data lives on your server. No tracking, no ads, just your words in your control.",
+                  icon: <Lock className="h-6 w-6" />,
+                  color: "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                },
+                {
+                  title: "Rich Text Editor",
+                  description: "Write beautiful entries with Tiptap editor support, handling everything from images to checklist.",
+                  icon: <Sparkles className="h-6 w-6" />,
+                  color: "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                },
+                {
+                  title: "Visual Calendar",
+                  description: "Relive memories through a beautiful calendar view featuring thumbnail previews of your media.",
+                  icon: <div className="h-6 w-6 flex items-center justify-center font-bold">📅</div>,
+                  color: "bg-green-500/10 text-green-600 dark:text-green-400"
+                },
+                {
+                  title: "Blogging Platform",
+                  description: "Share your selected entries with the world through a built-in, customizable blogging engine.",
+                  icon: <Book className="h-6 w-6" />,
+                  color: "bg-primary/10 text-primary"
+                },
+                {
+                  title: "Media Cleanup",
+                  description: "Keep your storage clean with intelligent scanning that identifies and removes unreferenced files.",
+                  icon: <Trash2 className="h-6 w-6" />,
+                  color: "bg-destructive/10 text-destructive"
+                },
+                {
+                  title: "Backup & Restore",
+                  description: "Never lose a memory. Securely export and import your entire library with single-click archives.",
+                  icon: <Archive className="h-6 w-6" />,
+                  color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                }
+              ].map((feature, idx) => (
+                <div
+                  key={idx}
+                  className="group relative flex flex-col p-8 rounded-2xl border bg-background/50 backdrop-blur-sm transition-all hover:shadow-xl hover:-translate-y-1 duration-300"
+                >
+                  <div className={cn(
+                    "mb-6 p-3 rounded-xl w-fit transition-transform group-hover:scale-110 duration-300",
+                    feature.color
+                  )}>
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                  <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-5 transition-opacity duration-500 pointer-events-none">
+                    <Sparkles className="h-16 w-16" />
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold">Private & Secure</h2>
-                <p className="text-center text-muted-foreground">
-                  Your data lives on your server. No tracking, no ads, just your words.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 border-border p-4 rounded-lg">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                </div>
-                <h2 className="text-xl font-bold">Daily Inspiration</h2>
-                <p className="text-center text-muted-foreground">
-                  Thought-provoking prompts and "On This Day" reflections to keep you writing.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 border-border p-4 rounded-lg">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Book className="h-6 w-6 text-primary" />
-                </div>
-                <h2 className="text-xl font-bold">Organized Journals</h2>
-                <p className="text-center text-muted-foreground">
-                  Create multiple journals for different aspects of your life.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 border-border p-4 rounded-lg">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <div className="h-6 w-6 text-primary flex items-center justify-center font-bold">📅</div>
-                </div>
-                <h2 className="text-xl font-bold">Visual Calendar</h2>
-                <p className="text-center text-muted-foreground">
-                  Relive memories with a beautiful calendar view featuring photo thumbnails.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 border-border p-4 rounded-lg">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <div className="h-6 w-6 text-primary flex items-center justify-center font-bold">✨</div>
-                </div>
-                <h2 className="text-xl font-bold">Insights & Basics</h2>
-                <p className="text-center text-muted-foreground">
-                  Track streaks and utilize smart defaults for a seamless writing experience.
-                </p>
-              </div>
+              ))}
             </div>
           </div>
         </section>
