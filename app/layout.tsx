@@ -37,13 +37,26 @@ export const metadata: Metadata = {
 
 
 
-export default function RootLayout({
+import { getAppConfig } from "@/app/lib/actions";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const config = await getAppConfig();
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${kanit.variable} ${prompt.variable}`} suppressHydrationWarning>
+      <head>
+        {config.analyticSnippet && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: config.analyticSnippet
+            }}
+          />
+        )}
+      </head>
       <body className="antialiased">
         <FontLoader />
         <Providers>

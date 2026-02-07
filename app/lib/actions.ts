@@ -464,6 +464,7 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
     const enableMultiUser = formData.get("enableMultiUser") === "on"
     const enableUserBlogging = formData.get("enableUserBlogging") === "on"
     const autoBackupInterval = formData.get("autoBackupInterval") as string || "1Week"
+    const analyticSnippet = formData.get("analyticSnippet") as string || ""
 
     try {
         const config = await prisma.appConfig.findFirst()
@@ -472,11 +473,11 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
         if (id) {
             await prisma.appConfig.update({
                 where: { id },
-                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, enableUserBlogging, autoBackupInterval }
+                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, enableUserBlogging, autoBackupInterval, analyticSnippet }
             })
         } else {
             await prisma.appConfig.create({
-                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, enableUserBlogging, autoBackupInterval }
+                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, enableUserBlogging, autoBackupInterval, analyticSnippet }
             })
         }
 

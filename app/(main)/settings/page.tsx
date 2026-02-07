@@ -89,6 +89,7 @@ export default async function SettingsPage() {
                         enableBlogging={appConfig.enableBlogging}
                         enableMultiUser={appConfig.enableMultiUser}
                         enableUserBlogging={appConfig.enableUserBlogging}
+                        analyticSnippet={appConfig.analyticSnippet}
                     />
                 </TabsContent>
 

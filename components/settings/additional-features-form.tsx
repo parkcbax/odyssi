@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { updateAppFeatures } from "@/app/lib/actions"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -14,9 +15,10 @@ interface AdditionalFeaturesFormProps {
     enableBlogging: boolean
     enableMultiUser: boolean
     enableUserBlogging: boolean
+    analyticSnippet?: string | null
 }
 
-export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, enableMultiUser, enableUserBlogging }: AdditionalFeaturesFormProps) {
+export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, enableMultiUser, enableUserBlogging, analyticSnippet }: AdditionalFeaturesFormProps) {
     const [state, formAction, isPending] = useActionState(updateAppFeatures, null)
     const router = useRouter()
 
@@ -94,6 +96,20 @@ export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, en
                             />
                         </div>
                     )}
+
+                    <div className="space-y-2 pt-4 border-t">
+                        <Label htmlFor="analyticSnippet" className="text-base">Analytic Snippet</Label>
+                        <p className="text-sm text-muted-foreground">
+                            Paste your analytic tracking code here (e.g., Google Analytics). This will be injected into every page.
+                        </p>
+                        <Textarea
+                            id="analyticSnippet"
+                            name="analyticSnippet"
+                            placeholder="<script>...</script>"
+                            defaultValue={analyticSnippet || ""}
+                            className="font-mono text-sm h-32"
+                        />
+                    </div>
 
                     <Button type="submit" disabled={isPending}>
                         {isPending ? "Saving..." : "Save Changes"}

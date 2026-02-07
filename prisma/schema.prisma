@@ -116,5 +116,6 @@ model AppConfig {
   // Multi-User Settings
   // Multi-User Settings
   enableMultiUser     Boolean @default(false)
-  enableUserBlogging  Boolean @default(false)
+  enableUserBlogging Boolean @default(false)
+  analyticSnippet   String?  @default("")
 }
