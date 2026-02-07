@@ -182,8 +182,18 @@ export default function DocsPage() {
                         <h3>Manual Backup</h3>
                         <p>Navigate to <strong>Settings &gt; Backup</strong>. You can choose to export a single journal or your entire library, including all images and settings. The result is a secure ZIP archive.</p>
 
-                        <h3>Automatic Backups</h3>
-                        <p>Enable automatic backups in the settings to have Odyssi periodically generate archives without manual intervention.</p>
+                        <h3 className="text-xl font-bold mt-8">Where are backups stored?</h3>
+                        <p>All generated backup files are stored in the <code>/backups</code> directory at the root of the Odyssi project.</p>
+
+                        <div className="p-4 rounded-lg bg-muted border my-6 not-prose">
+                            <h4 className="font-bold mb-2 flex items-center gap-2">
+                                <Shield className="h-4 w-4 text-primary" />
+                                Docker Volume Note
+                            </h4>
+                            <p className="text-sm text-muted-foreground m-0">
+                                If you are using the default <code>docker-compose.yml</code>, the internal <code>/app/backups</code> folder is mapped to <code>./backups</code> on your host machine. This ensures your backups persist even if the container is removed or updated.
+                            </p>
+                        </div>
 
                         <h3>Restoring</h3>
                         <p>Navigate to <strong>Settings &gt; Restore</strong> and upload one of your previously exported ZIP archives. Odyssi will overwrite existing entries and media if conflicts occur.</p>

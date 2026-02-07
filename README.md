@@ -63,8 +63,17 @@ For a fresh installation, the system seeds a default admin account:
 - **Email:** `admin@odyssi.com` (or the value of `ADMIN_EMAIL` in `.env`)
 - **Password:** `odyssi`
 
-> [!IMPORTANT]
 > Change your password immediately after the first login in **Settings > Profile**.
+
+## Backups
+
+Odyssi saves all backup ZIP files in the `/backups` directory within the project root.
+
+### Docker Users
+If you are using Docker, the backups are persisted via a volume. You can find your backup files on your host machine at:
+- **Default Path:** `./backups` (relative to your `docker-compose.yml`)
+
+Ensure this directory has proper write permissions for the Docker user.
 
 ## Deployment
 
