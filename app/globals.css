@@ -8,6 +8,10 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--app-font-family);
   --font-mono: var(--font-geist-mono);
+  --font-jetbrains-mono: var(--font-jetbrains-mono);
+  --font-fira-code: var(--font-fira-code);
+  --font-roboto: var(--font-roboto);
+  --font-lora: var(--font-lora);
   --font-kanit: var(--font-kanit);
   --font-prompt: var(--font-prompt);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -107,6 +111,10 @@
   --app-font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif !important;
 }
 
+[data-font="roboto"] {
+  --app-font-family: var(--font-roboto), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif !important;
+}
+
 .dark {
   --background: #09090b;
   --foreground: #fafafa;
@@ -169,55 +177,54 @@
 
 /*
  * FOOLPROOF FONT ENFORCEMENT
- * We target every single element on the page when a font is selected.
- * This overrides Tailwind Typography (prose), Tiptap (ProseMirror),
- * and browser defaults for all nested elements.
+ * We target elements that are NOT inside a code block.
+ * This prevents global font settings from leaking into code.
  */
-[data-font] {
-  font-family: var(--app-font-family) !important;
-}
-
-[data-font] * {
+[data-font] *:not(.code-block *):not(pre *):not(code *):not(.font-preview):not(.font-preview *) {
   font-family: inherit !important;
 }
 
 /* Extra insurance for components that might break inheritance */
-[data-font] .prose,
-[data-font] .prose *,
-[data-font] .ProseMirror,
-[data-font] .ProseMirror * {
+[data-font] .prose *:not(.code-block *):not(pre *):not(code *):not(.font-preview):not(.font-preview *),
+[data-font] .ProseMirror *:not(.code-block *):not(pre *):not(code *):not(.font-preview):not(.font-preview *) {
   font-family: var(--app-font-family) !important;
 }
+
 
 /* Blog Font Configuration */
 [data-blog-font="inter"] .prose,
 [data-blog-font="inter"] .ProseMirror {
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif !important;
+  --blog-font-family: var(--font-geist-sans), ui-sans-serif, sans-serif;
 }
 
 [data-blog-font="kanit"] .prose,
 [data-blog-font="kanit"] .ProseMirror {
-  font-family: var(--font-kanit), ui-sans-serif, system-ui, sans-serif !important;
+  --blog-font-family: var(--font-kanit), var(--font-geist-sans), ui-sans-serif, sans-serif;
 }
 
 [data-blog-font="prompt"] .prose,
 [data-blog-font="prompt"] .ProseMirror {
-  font-family: var(--font-prompt), ui-sans-serif, system-ui, sans-serif !important;
+  --blog-font-family: var(--font-prompt), var(--font-geist-sans), ui-sans-serif, sans-serif;
 }
 
 [data-blog-font="roboto"] .prose,
 [data-blog-font="roboto"] .ProseMirror {
-  font-family: 'Roboto', ui-sans-serif, system-ui, sans-serif !important;
+  --blog-font-family: var(--font-roboto), ui-sans-serif, sans-serif;
 }
 
 [data-blog-font="serif"] .prose,
 [data-blog-font="serif"] .ProseMirror {
-  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif !important;
+  --blog-font-family: var(--font-lora), ui-serif, Georgia, Cambria, serif;
 }
 
 [data-blog-font="mono"] .prose,
 [data-blog-font="mono"] .ProseMirror {
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  --blog-font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+[data-blog-font] .prose *:not(.code-block *):not(pre *):not(code *),
+[data-blog-font] .ProseMirror *:not(.code-block *):not(pre *):not(code *) {
+  font-family: var(--blog-font-family) !important;
 }
 
 /* Blog Size Configuration */
@@ -349,4 +356,158 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+}
+
+/* Code Block Syntax Highlighting */
+.code-block {
+  position: relative;
+  margin: 1.5rem 0;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  overflow: hidden !important;
+}
+
+.code-block pre {
+  background: transparent !important;
+  color: var(--foreground) !important;
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  padding: 1.25rem !important;
+  overflow-x: auto !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.code-block pre code,
+.code-block pre [data-node-view-content] {
+  background: none !important;
+  color: inherit !important;
+  font-size: 0.875rem !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+  /* Inherit from pre */
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #71717a;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-addition {
+  color: #c678dd;
+}
+
+.hljs-number,
+.hljs-string,
+.hljs-meta .hljs-meta-string,
+.hljs-literal,
+.hljs-doctag,
+.hljs-regexp {
+  color: #98c379;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: #61afef;
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-class .hljs-title,
+.hljs-type {
+  color: #e5c07b;
+}
+
+.hljs-tag,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-subst,
+.hljs-meta,
+.hljs-link {
+  color: #d19a66;
+}
+
+/* Code Block Font Configuration (Thematic Overrides) */
+[data-code-font="geist"] .code-block pre,
+[data-code-font="geist"] .code-block pre * {
+  font-family: var(--font-geist-mono), ui-monospace, monospace !important;
+}
+
+[data-code-font="jetbrains"] .code-block pre,
+[data-code-font="jetbrains"] .code-block pre * {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace !important;
+}
+
+[data-code-font="fira"] .code-block pre,
+[data-code-font="fira"] .code-block pre * {
+  font-family: var(--font-fira-code), ui-monospace, monospace !important;
+}
+
+.hljs-params,
+.hljs-attr {
+  color: #d19a66;
+}
+
+.hljs-attribute {
+  color: #98c379;
+}
+
+.hljs-built_in,
+.hljs-deletion {
+  color: #e06c75;
+}
+
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: #71717a;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-addition {
+  color: #c678dd;
+}
+
+.dark .hljs-number,
+.dark .hljs-string,
+.dark .hljs-meta .hljs-meta-string,
+.dark .hljs-literal,
+.dark .hljs-doctag,
+.dark .hljs-regexp {
+  color: #98c379;
+}
+
+.dark .hljs-title,
+.dark .hljs-section,
+.dark .hljs-name,
+.dark .hljs-selector-id,
+.dark .hljs-selector-class {
+  color: #61afef;
+}
+
+.dark .hljs-variable,
+.dark .hljs-template-variable,
+.dark .hljs-class .hljs-title,
+.dark .hljs-type {
+  color: #e5c07b;
+}
+
+.dark .hljs-tag,
+.dark .hljs-symbol,
+.dark .hljs-bullet,
+.dark .hljs-subst,
+.dark .hljs-meta,
+.dark .hljs-link {
+  color: #d19a66;
+}
+
+.dark .hljs-params,
+.dark .hljs-attr {
+  color: #d19a66;
 }

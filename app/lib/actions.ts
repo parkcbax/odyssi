@@ -448,7 +448,8 @@ export async function getAppConfig() {
                     redirectHomeToLogin: false,
                     enableBlogging: false,
                     enableMultiUser: false,
-                    enableUserBlogging: false
+                    enableUserBlogging: false,
+                    analyticSnippet: ""
                 }
             })
         }

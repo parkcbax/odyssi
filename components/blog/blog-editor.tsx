@@ -9,6 +9,11 @@ import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import CharacterCount from '@tiptap/extension-character-count'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import { CodeBlockComponent } from '../tiptap/code-block-component'
+import { all, createLowlight } from 'lowlight'
+const lowlight = createLowlight(all)
 import { CustomHTML } from '@/components/tiptap/html-extension'
 import { useState, useEffect, forwardRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
@@ -27,11 +32,37 @@ import {
     Link as LinkIcon,
     Loader2,
     Save,
-    Code
+    Code,
+    SquareCode,
+    Braces
 } from 'lucide-react'
+
+const LANGUAGES = [
+    { label: 'Plain Text', value: 'plaintext' },
+    { label: 'Python', value: 'python' },
+    { label: 'JavaScript', value: 'javascript' },
+    { label: 'TypeScript', value: 'typescript' },
+    { label: 'C', value: 'c' },
+    { label: 'C++', value: 'cpp' },
+    { label: 'Java', value: 'java' },
+    { label: 'Rust', value: 'rust' },
+    { label: 'Go', value: 'go' },
+    { label: 'Docker', value: 'dockerfile' },
+    { label: 'YAML', value: 'yaml' },
+    { label: 'Shell/Bash', value: 'bash' },
+    { label: 'XML/HTML', value: 'xml' },
+    { label: 'JSON', value: 'json' },
+]
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { createBlogPost, updateBlogPost } from '@/app/lib/actions'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 // ... (imports remain)
 import { ImageWithLoader } from "@/components/ui/image-with-loader"
 
@@ -70,7 +101,9 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                codeBlock: false,
+            }),
             Placeholder.configure({
                 placeholder: 'Write your story...',
                 emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:pointer-events-none',
@@ -81,6 +114,13 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
             TaskList,
             TaskItem.configure({ nested: true }),
             CharacterCount,
+            CodeBlockLowlight.configure({
+                lowlight,
+            }).extend({
+                addNodeView() {
+                    return ReactNodeViewRenderer(CodeBlockComponent)
+                },
+            }),
             CustomHTML,
         ],
         content: initialData?.content || '',
@@ -94,7 +134,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
     const [mounted, setMounted] = useState(false)
     useEffect(() => { setMounted(true) }, [])
 
-    if (!mounted) return null
+    if (!mounted || !editor) return null
 
     const wordCount = editor?.storage.characterCount.words() || 0
 
@@ -184,8 +224,8 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
     return (
         <div className="flex flex-col h-full min-h-[500px]">
             {/* Toolbar */}
-            <div className="flex items-center justify-between py-4 border-b bg-background sticky top-0 z-10">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center justify-between py-4 border-b bg-background sticky top-0 z-10 gap-2">
+                <div className="flex items-center gap-1 overflow-x-visible">
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleBold().run()} isActive={editor?.isActive('bold')}><Bold className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleItalic().run()} isActive={editor?.isActive('italic')}><Italic className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleUnderline().run()} isActive={editor?.isActive('underline')}><UnderlineIcon className="h-4 w-4" /></ToolbarButton>
@@ -196,7 +236,9 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleBulletList().run()} isActive={editor?.isActive('bulletList')}><List className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleTaskList().run()} isActive={editor?.isActive('taskList')}><ListTodo className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleBlockquote().run()} isActive={editor?.isActive('blockquote')}><Quote className="h-4 w-4" /></ToolbarButton>
+                    <ToolbarButton onClick={() => editor?.chain().focus().toggleCodeBlock().run()} isActive={editor?.isActive('codeBlock')} title="Code Block"><Braces className="h-4 w-4" /></ToolbarButton>
                     <div className="w-px h-6 bg-border mx-1" />
+
                     <ToolbarButton
                         onClick={() => document.getElementById('blog-image-upload')?.click()}
                         disabled={isUploading}
@@ -221,7 +263,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                         onClick={() => editor?.chain().focus().insertContent({ type: 'customHTML', attrs: { content: '' } }).run()}
                         title="Insert Custom HTML"
                     >
-                        <Code className="h-4 w-4" />
+                        <SquareCode className="h-4 w-4" />
                     </ToolbarButton>
                 </div>
             </div>

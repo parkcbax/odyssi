@@ -8,6 +8,11 @@ import LinkExtension from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import { CodeBlockComponent } from '@/components/tiptap/code-block-component'
+import { all, createLowlight } from 'lowlight'
+const lowlight = createLowlight(all)
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +25,9 @@ export function EntryViewer({ content }: EntryViewerProps) {
         editable: false,
         immediatelyRender: false,
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                codeBlock: false,
+            }),
             CustomImage,
             CustomHTML,
             LinkExtension,
@@ -28,6 +35,13 @@ export function EntryViewer({ content }: EntryViewerProps) {
             TaskList,
             TaskItem.configure({
                 nested: true,
+            }),
+            CodeBlockLowlight.configure({
+                lowlight,
+            }).extend({
+                addNodeView() {
+                    return ReactNodeViewRenderer(CodeBlockComponent)
+                },
             }),
         ],
         content: content,

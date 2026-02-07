@@ -12,6 +12,9 @@ export function FontLoader() {
 
         const savedBlogSize = localStorage.getItem("odyssi-blog-size") || "medium"
         document.documentElement.setAttribute("data-blog-size", savedBlogSize)
+
+        const savedCodeFont = localStorage.getItem("odyssi-code-font") || "geist"
+        document.documentElement.setAttribute("data-code-font", savedCodeFont)
     }, [])
 
     return null

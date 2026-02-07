@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Kanit, Prompt } from "next/font/google";
+import { Geist, Geist_Mono, Kanit, Prompt, JetBrains_Mono, Fira_Code, Roboto, Lora } from "next/font/google";
 import "./globals.css";
 import { FontLoader } from "@/components/font-loader";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -15,6 +15,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+});
+
+const firaCode = Fira_Code({
+  variable: "--font-fira-code",
+  subsets: ["latin"],
+});
+
 const kanit = Kanit({
   variable: "--font-kanit",
   weight: ["300", "400", "500", "600", "700"],
@@ -25,6 +35,17 @@ const prompt = Prompt({
   variable: "--font-prompt",
   weight: ["300", "400", "500", "600", "700"],
   subsets: ["latin", "thai"],
+});
+
+const roboto = Roboto({
+  variable: "--font-roboto",
+  weight: ["300", "400", "500", "700"],
+  subsets: ["latin"],
+});
+
+const lora = Lora({
+  variable: "--font-lora",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -47,7 +68,7 @@ export default async function RootLayout({
   const config = await getAppConfig();
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${kanit.variable} ${prompt.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${kanit.variable} ${prompt.variable} ${roboto.variable} ${lora.variable}`} suppressHydrationWarning>
       <head>
         {!!config.analyticSnippet && (
           <script

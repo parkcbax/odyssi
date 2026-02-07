@@ -9,6 +9,30 @@ import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import CharacterCount from '@tiptap/extension-character-count'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import { CodeBlockComponent } from './tiptap/code-block-component'
+import { all, createLowlight } from 'lowlight'
+const lowlight = createLowlight(all)
+
+const LANGUAGES = [
+    { label: 'Plain Text', value: 'plaintext' },
+    { label: 'Python', value: 'python' },
+    { label: 'JavaScript', value: 'javascript' },
+    { label: 'TypeScript', value: 'typescript' },
+    { label: 'C', value: 'c' },
+    { label: 'C++', value: 'cpp' },
+    { label: 'Java', value: 'java' },
+    { label: 'Rust', value: 'rust' },
+    { label: 'Go', value: 'go' },
+    { label: 'Docker', value: 'dockerfile' },
+    { label: 'YAML', value: 'yaml' },
+    { label: 'Shell/Bash', value: 'bash' },
+    { label: 'XML/HTML', value: 'xml' },
+    { label: 'JSON', value: 'json' },
+]
+
+const MOODS = ["😊", "😢", "😡", "😴", "🤔", "🎉", "🔥", "❤️", "✨", "🌧️"]
 import { useState, useEffect, forwardRef } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,6 +52,9 @@ import {
     Loader2,
     Image as ImageIcon,
     Link as LinkIcon,
+    Code,
+    SquareCode,
+    Braces,
     X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -84,7 +111,9 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                codeBlock: false,
+            }),
             Placeholder.configure({
                 placeholder: 'Write your thoughts...',
                 emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:pointer-events-none',
@@ -95,6 +124,13 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
             TaskList,
             TaskItem.configure({ nested: true }),
             CharacterCount,
+            CodeBlockLowlight.configure({
+                lowlight,
+            }).extend({
+                addNodeView() {
+                    return ReactNodeViewRenderer(CodeBlockComponent)
+                },
+            }),
         ],
         content: initialData?.content || '',
         editorProps: {
@@ -107,7 +143,7 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
     const [mounted, setMounted] = useState(false)
     useEffect(() => { setMounted(true) }, [])
 
-    if (!mounted) return null
+    if (!mounted || !editor) return null
 
     const wordCount = editor?.storage.characterCount.words() || 0
 
@@ -214,8 +250,6 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
         editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
     }
 
-    const MOODS = ["😊", "😢", "😡", "😴", "🤔", "🎉", "🔥", "❤️", "✨", "🌧️"]
-
     return (
         <div className="flex flex-col h-[calc(100vh-2rem)]">
             {/* Header */}
@@ -282,8 +316,8 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
 
             {/* Bottom Toolbar */}
             <div className="border-t bg-background/95 backdrop-blur p-2 sticky bottom-0">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1 overflow-x-visible">
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleBold().run()} isActive={editor?.isActive('bold')}><Bold className="h-4 w-4" /></ToolbarButton>
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleItalic().run()} isActive={editor?.isActive('italic')}><Italic className="h-4 w-4" /></ToolbarButton>
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleUnderline().run()} isActive={editor?.isActive('underline')}><UnderlineIcon className="h-4 w-4" /></ToolbarButton>
@@ -294,6 +328,7 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleBulletList().run()} isActive={editor?.isActive('bulletList')}><List className="h-4 w-4" /></ToolbarButton>
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleTaskList().run()} isActive={editor?.isActive('taskList')}><ListTodo className="h-4 w-4" /></ToolbarButton>
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleBlockquote().run()} isActive={editor?.isActive('blockquote')}><Quote className="h-4 w-4" /></ToolbarButton>
+                        <ToolbarButton onClick={() => editor?.chain().focus().toggleCodeBlock().run()} isActive={editor?.isActive('codeBlock')} title="Code Block"><Braces className="h-4 w-4" /></ToolbarButton>
                         <div className="w-px h-6 bg-border mx-1" />
 
                         {/* Media & Link Tools */}

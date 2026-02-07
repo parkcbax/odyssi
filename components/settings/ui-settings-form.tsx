@@ -17,6 +17,7 @@ export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
     const [font, setFont] = useState("inter")
     const [blogFont, setBlogFont] = useState("inter")
     const [blogSize, setBlogSize] = useState("medium")
+    const [codeFont, setCodeFont] = useState("geist")
 
     useEffect(() => {
         const savedFont = localStorage.getItem("odyssi-font") || "inter"
@@ -30,6 +31,10 @@ export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
         const savedBlogSize = localStorage.getItem("odyssi-blog-size") || "medium"
         setBlogSize(savedBlogSize)
         document.documentElement.setAttribute("data-blog-size", savedBlogSize)
+
+        const savedCodeFont = localStorage.getItem("odyssi-code-font") || "geist"
+        setCodeFont(savedCodeFont)
+        document.documentElement.setAttribute("data-code-font", savedCodeFont)
     }, [])
 
     const handleFontChange = (value: string) => {
@@ -48,6 +53,12 @@ export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
         setBlogSize(value)
         localStorage.setItem("odyssi-blog-size", value)
         document.documentElement.setAttribute("data-blog-size", value)
+    }
+
+    const handleCodeFontChange = (value: string) => {
+        setCodeFont(value)
+        localStorage.setItem("odyssi-code-font", value)
+        document.documentElement.setAttribute("data-code-font", value)
     }
 
     return (
@@ -120,10 +131,10 @@ export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
                                 <SelectValue placeholder="Select a font" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="inter">Inter (Default)</SelectItem>
-                                <SelectItem value="kanit">Kanit</SelectItem>
-                                <SelectItem value="prompt">Prompt</SelectItem>
-                                <SelectItem value="roboto">Roboto</SelectItem>
+                                <SelectItem value="inter" className="font-preview" style={{ fontFamily: 'var(--font-geist-sans)' }}>Inter (Default)</SelectItem>
+                                <SelectItem value="kanit" className="font-preview" style={{ fontFamily: 'var(--font-kanit)' }}>Kanit</SelectItem>
+                                <SelectItem value="prompt" className="font-preview" style={{ fontFamily: 'var(--font-prompt)' }}>Prompt</SelectItem>
+                                <SelectItem value="roboto" className="font-preview" style={{ fontFamily: 'var(--font-roboto)' }}>Roboto</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -147,12 +158,12 @@ export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
                                         <SelectValue placeholder="Select a font" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="inter">Inter (Sans-serif)</SelectItem>
-                                        <SelectItem value="kanit">Kanit (Sans-serif)</SelectItem>
-                                        <SelectItem value="prompt">Prompt (Sans-serif)</SelectItem>
-                                        <SelectItem value="roboto">Roboto (Sans-serif)</SelectItem>
-                                        <SelectItem value="serif">Serif (Classic)</SelectItem>
-                                        <SelectItem value="mono">Monospace (Code)</SelectItem>
+                                        <SelectItem value="inter" className="font-preview" style={{ fontFamily: 'var(--font-geist-sans)' }}>Inter (Sans-serif)</SelectItem>
+                                        <SelectItem value="kanit" className="font-preview" style={{ fontFamily: 'var(--font-kanit)' }}>Kanit (Sans-serif)</SelectItem>
+                                        <SelectItem value="prompt" className="font-preview" style={{ fontFamily: 'var(--font-prompt)' }}>Prompt (Sans-serif)</SelectItem>
+                                        <SelectItem value="roboto" className="font-preview" style={{ fontFamily: 'var(--font-roboto)' }}>Roboto (Sans-serif)</SelectItem>
+                                        <SelectItem value="serif" className="font-preview" style={{ fontFamily: 'var(--font-lora)' }}>Serif (Classic)</SelectItem>
+                                        <SelectItem value="mono" className="font-preview" style={{ fontFamily: 'var(--font-geist-mono)' }}>Monospace (Code)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -174,6 +185,30 @@ export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
                     </CardContent>
                 </Card>
             )}
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Code Block Typography</CardTitle>
+                    <CardDescription>
+                        Set the font style for code snippets and technical blocks.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Code Font</Label>
+                        <Select value={codeFont} onValueChange={handleCodeFontChange}>
+                            <SelectTrigger className="w-[280px]">
+                                <SelectValue placeholder="Select a code font" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="geist" className="font-preview" style={{ fontFamily: 'var(--font-geist-mono)' }}>Geist Mono (Default)</SelectItem>
+                                <SelectItem value="jetbrains" className="font-preview" style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>JetBrains Mono</SelectItem>
+                                <SelectItem value="fira" className="font-preview" style={{ fontFamily: 'var(--font-fira-code)' }}>Fira Code</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     )
 }
