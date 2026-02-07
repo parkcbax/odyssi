@@ -364,12 +364,21 @@ export async function updateProfile(
 
     const { name, email, timezone } = validatedFields.data
 
+    const userIsAdmin = isAdmin(session.user.email)
+
     try {
+        const currentUser = await prisma.user.findUnique({ where: { id: session.user.id } })
+
+        // Prevent email change for non-admins
+        if (!userIsAdmin && currentUser?.email !== email) {
+            return { message: "Only administrators can change their email address." }
+        }
+
         await prisma.user.update({
             where: { id: session.user.id },
             data: {
                 name,
-                email,
+                email: userIsAdmin ? email : undefined, // Only update email if admin
                 timezone: timezone || "UTC"
             }
         })

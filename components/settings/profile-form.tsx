@@ -25,9 +25,10 @@ interface ProfileFormProps {
         email: string
         timezone: string | null
     }
+    isAdmin: boolean
 }
 
-export function ProfileForm({ user }: ProfileFormProps) {
+export function ProfileForm({ user, isAdmin }: ProfileFormProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [state, dispatch] = useActionState(updateProfile, {} as any)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,7 +90,15 @@ export function ProfileForm({ user }: ProfileFormProps) {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" name="email" type="email" defaultValue={user.email} required />
+                            <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                defaultValue={user.email}
+                                required
+                                disabled={!isAdmin}
+                                className={!isAdmin ? "bg-muted text-muted-foreground" : ""}
+                            />
                             {state?.errors?.email && <p className="text-sm text-red-500">{state.errors.email}</p>}
                         </div>
                         <div className="space-y-2">

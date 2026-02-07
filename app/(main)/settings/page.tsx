@@ -76,7 +76,7 @@ export default async function SettingsPage() {
                 </TabsList>
 
                 <TabsContent value="profile" className="space-y-6">
-                    <ProfileForm user={user} />
+                    <ProfileForm user={user} isAdmin={isUserAdmin} />
                 </TabsContent>
 
                 <TabsContent value="ui" className="space-y-6">

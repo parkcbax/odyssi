@@ -66,9 +66,6 @@ export function LoginForm({
                                 )}
                             </div>
                         </div>
-                        <div className="mt-4 text-center text-sm text-muted-foreground">
-                            For demo use: <b>admin@odyssi.com</b> / <b>odyssi</b>
-                        </div>
                     </form>
                 </CardContent>
             </Card>
