@@ -440,18 +440,34 @@ export async function updatePassword(
 }
 
 export async function getAppConfig() {
-    const config = await prisma.appConfig.findFirst()
-    if (!config) {
-        return await prisma.appConfig.create({
-            data: {
-                redirectHomeToLogin: false,
-                enableBlogging: false,
-                enableMultiUser: false,
-                enableUserBlogging: false
-            }
-        })
+    try {
+        const config = await prisma.appConfig.findFirst()
+        if (!config) {
+            return await prisma.appConfig.create({
+                data: {
+                    redirectHomeToLogin: false,
+                    enableBlogging: false,
+                    enableMultiUser: false,
+                    enableUserBlogging: false
+                }
+            })
+        }
+        return config
+    } catch (error) {
+        console.warn("Could not fetch app config (database might be unavailable during build):", error)
+        return {
+            id: "default",
+            redirectHomeToLogin: false,
+            enableBlogging: false,
+            enableAutoBackup: false,
+            enableMultiUser: false,
+            enableUserBlogging: false,
+            autoBackupInterval: "1Week",
+            analyticSnippet: "",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        }
     }
-    return config
 }
 
 export async function updateAppFeatures(prevState: any, formData: FormData) {
