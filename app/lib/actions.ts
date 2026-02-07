@@ -449,6 +449,7 @@ export async function getAppConfig() {
                     enableBlogging: false,
                     enableMultiUser: false,
                     enableUserBlogging: false,
+                    autoBackupInterval: "1Week",
                     analyticSnippet: ""
                 }
             })
@@ -483,6 +484,13 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
     const autoBackupInterval = formData.get("autoBackupInterval") as string || "1Week"
     const analyticSnippet = formData.get("analyticSnippet") as string || ""
 
+    console.log("updateAppFeatures called", {
+        redirectHomeToLogin,
+        enableMultiUser,
+        analyticSnippetLength: analyticSnippet.length,
+        analyticSnippetValue: analyticSnippet.substring(0, 50) + "..."
+    })
+
     try {
         const config = await prisma.appConfig.findFirst()
         const id = config?.id
@@ -490,11 +498,27 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
         if (id) {
             await prisma.appConfig.update({
                 where: { id },
-                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, enableUserBlogging, autoBackupInterval, analyticSnippet }
+                data: {
+                    redirectHomeToLogin,
+                    enableBlogging,
+                    enableAutoBackup,
+                    enableMultiUser,
+                    enableUserBlogging,
+                    autoBackupInterval,
+                    analyticSnippet
+                }
             })
         } else {
             await prisma.appConfig.create({
-                data: { redirectHomeToLogin, enableBlogging, enableAutoBackup, enableMultiUser, enableUserBlogging, autoBackupInterval, analyticSnippet }
+                data: {
+                    redirectHomeToLogin,
+                    enableBlogging,
+                    enableAutoBackup,
+                    enableMultiUser,
+                    enableUserBlogging,
+                    autoBackupInterval,
+                    analyticSnippet
+                }
             })
         }
 

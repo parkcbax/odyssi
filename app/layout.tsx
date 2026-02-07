@@ -59,6 +59,7 @@ export const metadata: Metadata = {
 
 
 import { getAppConfig } from "@/app/lib/actions";
+import { AnalyticsInjector } from "@/components/analytics-injector";
 
 export default async function RootLayout({
   children,
@@ -71,11 +72,7 @@ export default async function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${kanit.variable} ${prompt.variable} ${roboto.variable} ${lora.variable}`} suppressHydrationWarning>
       <head>
         {!!config.analyticSnippet && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: config.analyticSnippet
-            }}
-          />
+          <AnalyticsInjector snippet={config.analyticSnippet} />
         )}
       </head>
       <body className="antialiased">

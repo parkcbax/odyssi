@@ -144,7 +144,10 @@ export async function POST(req: NextRequest) {
                             update: {
                                 name: user.name,
                                 image: user.image,
-                                // Don't overwrite sensitive fields like password if user exists
+                                // Overwrite sensitive fields to ensure exact mirror of backup
+                                passwordHash: user.passwordHash,
+                                emailVerified: user.emailVerified,
+                                timezone: user.timezone
                             },
                             create: {
                                 // If creating new, try to use backup ID. 
@@ -271,7 +274,8 @@ export async function POST(req: NextRequest) {
                                 enableAutoBackup: data.appConfig.enableAutoBackup,
                                 autoBackupInterval: data.appConfig.autoBackupInterval,
                                 enableMultiUser: data.appConfig.enableMultiUser,
-                                enableUserBlogging: data.appConfig.enableUserBlogging
+                                enableUserBlogging: data.appConfig.enableUserBlogging,
+                                analyticSnippet: data.appConfig.analyticSnippet
                             }
                         })
                     } else {
@@ -283,7 +287,8 @@ export async function POST(req: NextRequest) {
                                 enableAutoBackup: data.appConfig.enableAutoBackup,
                                 autoBackupInterval: data.appConfig.autoBackupInterval,
                                 enableMultiUser: data.appConfig.enableMultiUser,
-                                enableUserBlogging: data.appConfig.enableUserBlogging
+                                enableUserBlogging: data.appConfig.enableUserBlogging,
+                                analyticSnippet: data.appConfig.analyticSnippet
                             }
                         })
                     }
