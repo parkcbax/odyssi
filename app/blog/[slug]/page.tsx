@@ -1,6 +1,45 @@
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { BlogRenderer } from "@/components/blog/blog-renderer"
+import { Metadata } from "next"
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+    const { slug } = await params
+    const post = await prisma.blogPost.findUnique({
+        where: { slug },
+        select: { title: true, excerpt: true, featuredImage: true }
+    })
+
+    if (!post) {
+        return {
+            title: "Post Not Found",
+            description: "The requested blog post could not be found."
+        }
+    }
+
+    const baseUrl = process.env.NEXTAUTH_URL || "https://odys.si"
+    const ogImage = post.featuredImage
+        ? (post.featuredImage.startsWith('http') ? post.featuredImage : `${baseUrl}${post.featuredImage}`)
+        : undefined
+
+    return {
+        title: post.title,
+        description: post.excerpt,
+        openGraph: {
+            title: post.title,
+            description: post.excerpt || undefined,
+            url: `${baseUrl}/blog/${slug}`,
+            type: "article",
+            images: ogImage ? [{ url: ogImage }] : undefined,
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: post.title,
+            description: post.excerpt || undefined,
+            images: ogImage ? [ogImage] : undefined,
+        }
+    }
+}
 
 export default async function BlogPostPage({ params }: { params: { slug: string } }) {
     const { slug } = await params
