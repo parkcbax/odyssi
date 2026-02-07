@@ -49,7 +49,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${kanit.variable} ${prompt.variable}`} suppressHydrationWarning>
       <head>
-        {config.analyticSnippet && (
+        {!!config.analyticSnippet && (
           <script
             dangerouslySetInnerHTML={{
               __html: config.analyticSnippet

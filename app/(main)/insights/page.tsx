@@ -1,13 +1,27 @@
-import { getInsightsData } from "@/app/lib/actions-insights"
+'use client'
+
+import { getInsightsData, InsightData } from "@/app/lib/actions-insights"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Flame, BookOpen, PenTool, LayoutTemplate, Activity } from "lucide-react"
+import { Flame, BookOpen, PenTool, Activity, Tag, MapPin } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
-export const dynamic = 'force-dynamic'
+export default function InsightsPage() {
+    const [data, setData] = useState<InsightData | null>(null)
+    const [loading, setLoading] = useState(true)
 
-export default async function InsightsPage() {
-    const data = await getInsightsData()
+    useEffect(() => {
+        getInsightsData().then(d => {
+            setData(d)
+            setLoading(false)
+        })
+    }, [])
 
-    if (!data) return null
+    if (loading) {
+        return <div className="p-8 text-center text-muted-foreground">Loading insights...</div>
+    }
+
+    if (!data) return <div className="p-8 text-center text-muted-foreground">No data available.</div>
 
     return (
         <div className="flex flex-col gap-8 max-w-5xl mx-auto">
@@ -102,38 +116,125 @@ export default async function InsightsPage() {
                     </CardContent>
                 </Card>
 
-                {/* Day Distribution */}
+                {/* Day Distribution (Word Count) */}
                 <Card className="col-span-1">
                     <CardHeader>
-                        <CardTitle>Writing Activity</CardTitle>
+                        <CardTitle>Writing Activity (Words)</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-end justify-between h-[200px] mt-4 px-2">
-                            <div className="flex items-end justify-between h-[200px] mt-4 px-2">
-                                {data.totalEntries > 0 ? (
-                                    data.dayDistribution.map((item) => {
-                                        const maxCount = Math.max(...data.dayDistribution.map(d => d.count))
-                                        const heightPercentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0
+                        <div className="h-[200px] w-full mt-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={data.dayDistribution}>
+                                    <defs>
+                                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <XAxis
+                                        dataKey="day"
+                                        stroke="#888888"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="#888888"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(value) => `${value}`}
+                                    />
+                                    <Tooltip
+                                        cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                        content={({ active, payload, label }) => {
+                                            if (active && payload && payload.length) {
+                                                return (
+                                                    <div className="rounded-lg border bg-popover p-2 shadow-sm">
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                                    {label}
+                                                                </span>
+                                                                <span className="font-bold text-muted-foreground">
+                                                                    {payload[0].value} words
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
+                                            return null
+                                        }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="count"
+                                        stroke="hsl(var(--primary))"
+                                        strokeWidth={2}
+                                        fillOpacity={1}
+                                        fill="url(#colorCount)"
+                                        dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--background))" }}
+                                        activeDot={{ r: 6, strokeWidth: 0 }}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
-                                        return (
-                                            <div key={item.day} className="flex flex-col items-center gap-2 group">
-                                                <div className="relative w-8 bg-secondary rounded-t-sm h-full flex items-end overflow-hidden group-hover:bg-secondary/80 transition-colors">
-                                                    <div
-                                                        className="w-full bg-primary/80 group-hover:bg-primary transition-all duration-500"
-                                                        style={{ height: `${heightPercentage}%` }}
-                                                    />
-                                                </div>
-                                                <span className="text-xs text-muted-foreground font-medium">{item.day}</span>
-                                                <span className="sr-only">{item.count} entries</span>
-                                            </div>
-                                        )
-                                    })
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                                        No writing activity recorded yet.
+            <div className="grid gap-4 md:grid-cols-2">
+                {/* Tags Distribution */}
+                <Card className="col-span-1">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Tag className="h-4 w-4" />
+                            Top Tags
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {data.tagsDistribution.length > 0 ? (
+                                data.tagsDistribution.map((item) => (
+                                    <div key={item.tag} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-2 w-2 rounded-full bg-primary" />
+                                            <span className="font-medium">{item.tag}</span>
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">{item.count}</span>
                                     </div>
-                                )}
-                            </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-8">No tags used yet.</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Location Distribution */}
+                <Card className="col-span-1">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            Top Locations
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {data.locationDistribution.length > 0 ? (
+                                data.locationDistribution.map((item) => (
+                                    <div key={item.location} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-2 w-2 rounded-full bg-orange-500" />
+                                            <span className="font-medium">{item.location}</span>
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">{item.count}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-8">No location data available yet.</p>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

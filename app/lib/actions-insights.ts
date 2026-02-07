@@ -12,17 +12,24 @@ export type InsightData = {
     totalWords: number
     moodDistribution: { mood: string; count: number }[]
     dayDistribution: { day: string; count: number }[]
+    tagsDistribution: { tag: string; count: number }[]
+    locationDistribution: { location: string; count: number }[]
 }
 
 export async function getInsightsData(): Promise<InsightData | null> {
     const session = await auth()
     if (!session?.user?.id) return null
 
+    // Get User Journals first (safer for Prisma Adapter bugs?)
+    const journals = await prisma.journal.findMany({
+        where: { userId: session.user.id },
+        select: { id: true }
+    })
+    const journalIds = journals.map(j => j.id)
+
     const entries = await prisma.entry.findMany({
         where: {
-            journal: {
-                userId: session.user.id
-            }
+            journalId: { in: journalIds }
         },
         orderBy: {
             date: 'desc' // Newest first
@@ -30,9 +37,17 @@ export async function getInsightsData(): Promise<InsightData | null> {
         select: {
             date: true,
             content: true,
-            mood: true
+            mood: true,
+            locationName: true,
+            tags: {
+                select: {
+                    name: true
+                }
+            }
         }
     })
+
+    console.log(`[Insights] User: ${session.user.id}, Journals: ${journalIds.length}, Entries: ${entries.length}`)
 
     // 1. Total Entries
     const totalEntries = entries.length
@@ -103,26 +118,57 @@ export async function getInsightsData(): Promise<InsightData | null> {
         .map(([mood, count]) => ({ mood, count }))
         .sort((a, b) => b.count - a.count)
 
-    // 5. Day of Week Distribution
-    const dayMap = new Map<number, number>()
-    // Initialize 0-6
-    for (let i = 0; i < 7; i++) dayMap.set(i, 0)
+    // 5. Last 7 Days Distribution
+    const dayMap = new Map<string, number>()
+    const last7Days: { date: string, label: string }[] = []
+
+    for (let i = 6; i >= 0; i--) {
+        const d = subDays(new Date(), i)
+        const dateKey = format(d, 'yyyy-MM-dd')
+        const label = format(d, 'EEE') // Mon, Tue, etc.
+        last7Days.push({ date: dateKey, label })
+        dayMap.set(dateKey, 0)
+    }
 
     entries.forEach(entry => {
-        const day = getDay(new Date(entry.date)) // 0 = Sunday
-        dayMap.set(day, (dayMap.get(day) || 0) + 1)
+        const dateKey = format(startOfDay(entry.date), 'yyyy-MM-dd')
+        if (dayMap.has(dateKey)) {
+            const text = getContentSnippet(entry.content)
+            const count = text.trim().split(/\s+/).filter(w => w.length > 0).length
+            dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + count)
+        }
     })
 
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const dayDistribution = Array.from(dayMap.entries())
-        .map(([dayIndex, count]) => ({ day: days[dayIndex], count }))
-    // Shift to start with Monday? Or keep Sunday. Let's keep Sunday as 0 but maybe order visually later.
-    // Usually charts expect array. Let's return Mon-Sun order for chart.
+    const dayDistributionOrdered = last7Days.map(d => ({
+        day: d.label,
+        count: dayMap.get(d.date) || 0
+    }))
 
-    const dayDistributionOrdered = [
-        ...dayDistribution.slice(1), // Mon-Sat
-        dayDistribution[0] // Sun
-    ]
+    console.log("[Insights] Last 7 Days:", JSON.stringify(dayDistributionOrdered))
+
+    // 6. Tags Distribution
+    const tagMap = new Map<string, number>()
+    entries.forEach(entry => {
+        entry.tags.forEach(tag => {
+            tagMap.set(tag.name, (tagMap.get(tag.name) || 0) + 1)
+        })
+    })
+    const tagsDistribution = Array.from(tagMap.entries())
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10) // Top 10 tags
+
+    // 7. Location Distribution
+    const locationMap = new Map<string, number>()
+    entries.forEach(entry => {
+        if (entry.locationName) {
+            locationMap.set(entry.locationName, (locationMap.get(entry.locationName) || 0) + 1)
+        }
+    })
+    const locationDistribution = Array.from(locationMap.entries())
+        .map(([location, count]) => ({ location, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10) // Top 10 locations
 
     return {
         totalEntries,
@@ -130,6 +176,8 @@ export async function getInsightsData(): Promise<InsightData | null> {
         longestStreak,
         totalWords,
         moodDistribution,
-        dayDistribution: dayDistributionOrdered
+        dayDistribution: dayDistributionOrdered,
+        tagsDistribution,
+        locationDistribution
     }
 }
