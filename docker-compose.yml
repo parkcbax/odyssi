@@ -8,18 +8,18 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "5024:3000"
+      - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://odyssi:odyssi_password@postgres:5432/odyssi_db
+      DATABASE_URL: postgresql://${DB_USER:-odyssi}:${DB_PASSWORD:-odyssi_password}@postgres:5432/${DB_NAME:-odyssi_db}
       AUTH_TRUST_HOST: "true"
-      NEXTAUTH_SECRET: NB7UOWeYYaYdVYcOrDPfBUaQu66xkaQFRMra2oIk
-      NEXTAUTH_URL: https://odys.si
-      ADMIN_EMAIL: admin@odyssi.com,p@rk.ci
+      AUTH_SECRET: ${AUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@odyssi.com}
     command: >
       sh -c "npx prisma migrate deploy && node server.js"
     volumes:
-      - /volume1/docker/odyssi/public/uploads:/app/public/uploads
-      - /volume1/docker/odyssi/backups:/app/backups
+      - ./public/uploads:/app/public/uploads
+      - ./backups:/app/backups
     depends_on:
       - postgres
     networks:
@@ -30,13 +30,13 @@ services:
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: odyssi
-      POSTGRES_PASSWORD: odyssi_password
-      POSTGRES_DB: odyssi_db
+      POSTGRES_USER: ${DB_USER:-odyssi}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-odyssi_password}
+      POSTGRES_DB: ${DB_NAME:-odyssi_db}
     volumes:
-      - /volume1/docker/odyssi/postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
     ports:
-      - "5434:5432"
+      - "${DB_PORT:-5434}:5432"
     networks:
       - odyssi-network
 

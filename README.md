@@ -21,6 +21,14 @@ Odyssi is a minimalist, self-hosted sanctuary for your memories. Private, secure
 - **UI:** Tailwind CSS, Shadcn architecture, Lucide icons
 - **Deployment:** Docker & Docker Compose
 
+## Prerequisites
+
+Before installing Odyssi, ensure you have the following:
+
+- **Node.js:** Version 18.x or later.
+- **PostgreSQL:** A running instance of PostgreSQL (v14+ recommended).
+- **Package Manager:** `npm` (included with Node.js).
+
 ## Getting Started
 
 1.  **Clone the repository:**

@@ -105,6 +105,9 @@ export default async function Home() {
           <span>Odyssi</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
+          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/docs">
+            Documentation
+          </Link>
           {config.enableBlogging && (
             <Link className="text-sm font-medium hover:underline underline-offset-4" href="#blog">
               Blog
