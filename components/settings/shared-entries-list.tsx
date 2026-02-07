@@ -114,10 +114,13 @@ export function SharedEntriesList({ isAdmin }: SharedEntriesListProps) {
                                 </a>
                             </TableCell>
                             <TableCell className="text-muted-foreground whitespace-nowrap">
-                                {entry.publicExpiresAt
-                                    ? new Date(entry.publicExpiresAt).toLocaleDateString() + " " + new Date(entry.publicExpiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                    : <span className="text-muted-foreground/50">-</span>
-                                }
+                                {entry.publicExpiresAt ? (
+                                    <span className="tabular-nums">
+                                        <ClientDate date={entry.publicExpiresAt} />
+                                    </span>
+                                ) : (
+                                    <span className="text-muted-foreground/50">-</span>
+                                )}
                             </TableCell>
                             <TableCell className="text-right">
                                 <Button
@@ -136,4 +139,14 @@ export function SharedEntriesList({ isAdmin }: SharedEntriesListProps) {
             </Table>
         </div>
     )
+}
+
+function ClientDate({ date }: { date: Date | string }) {
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => setMounted(true), [])
+
+    if (!mounted) return null
+
+    const d = new Date(date)
+    return <>{d.toLocaleDateString()} {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</>
 }

@@ -8,9 +8,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
-import { Archive, Save, Clock } from "lucide-react"
+import { Archive, Save, Clock, Trash2, Loader2, ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { getAppConfig, updateAppFeatures } from "@/app/lib/actions"
+import { cleanUnreferencedMedia } from "@/app/lib/actions-media"
+import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 interface BackupViewProps {
     journals: { id: string, title: string }[]
@@ -26,6 +29,13 @@ export function BackupView({ journals, initialAutoBackup, initialInterval }: Bac
 
     const [isBackingUp, setIsBackingUp] = useState(false)
     const [progress, setProgress] = useState(0)
+
+    // Media Cleanup State
+    const [isCleaning, setIsCleaning] = useState(false)
+    const [cleanProgress, setCleanProgress] = useState(0)
+    const [cleanStatus, setCleanStatus] = useState("")
+    const [mediaReport, setMediaReport] = useState<any[] | null>(null)
+    const [isReportExpanded, setIsReportExpanded] = useState(false)
 
     // Auto Backup State
     const [enableAutoBackup, setEnableAutoBackup] = useState(initialAutoBackup)
@@ -121,6 +131,39 @@ export function BackupView({ journals, initialAutoBackup, initialInterval }: Bac
         }
     }
 
+    const handleCleanup = async () => {
+        setIsCleaning(true)
+        setCleanProgress(10)
+        setCleanStatus("Scanning for unreferenced media...")
+        setMediaReport(null)
+
+        try {
+            const result = await cleanUnreferencedMedia()
+
+            setCleanProgress(100)
+            if (result.success) {
+                toast.success(result.message)
+                setCleanStatus(`Done! ${result.message}`)
+                setMediaReport(result.mediaItems)
+                setIsReportExpanded(true)
+            } else {
+                toast.error(result.message)
+                setCleanStatus("Cleanup failed")
+            }
+
+            setTimeout(() => {
+                setIsCleaning(false)
+                setCleanProgress(0)
+                setCleanStatus("")
+            }, 3000)
+
+        } catch (error) {
+            toast.error("Cleanup failed")
+            setIsCleaning(false)
+            setCleanProgress(0)
+        }
+    }
+
     return (
         <div className="space-y-6">
             <Card>
@@ -164,6 +207,104 @@ export function BackupView({ journals, initialAutoBackup, initialInterval }: Bac
                     <Button onClick={handleSaveAutoSettings} disabled={isSavingSettings} variant="secondary" size="sm">
                         {isSavingSettings ? "Saving..." : "Save Settings"}
                     </Button>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-destructive">
+                        <Trash2 className="h-5 w-5" />
+                        Media Cleanup
+                    </CardTitle>
+                    <CardDescription>
+                        Move files in <code className="bg-muted px-1 rounded">public/uploads</code> that are not used in any diary entries or blog posts to a <code className="bg-muted px-1 rounded">trash</code> folder.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        This operation will scan your entire database for image references. No files are permanently deleted; they are moved to a trash subfolder for manual review.
+                    </p>
+
+                    {isCleaning && (
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs text-muted-foreground animate-pulse">
+                                <span>{cleanStatus}</span>
+                                <span>{cleanProgress}%</span>
+                            </div>
+                            <Progress value={cleanProgress} className="h-2" />
+                        </div>
+                    )}
+
+                    <Button
+                        onClick={handleCleanup}
+                        disabled={isCleaning}
+                        variant="outline"
+                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                        {isCleaning ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Trash2 className="mr-2 h-4 w-4" />
+                        )}
+                        Clean unreferenced media
+                    </Button>
+
+                    {mediaReport && (
+                        <div className="mt-6 border-t pt-4">
+                            <button
+                                onClick={() => setIsReportExpanded(!isReportExpanded)}
+                                className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                            >
+                                {isReportExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                <span>Media Index Report ({mediaReport.length} items)</span>
+                            </button>
+
+                            {isReportExpanded && (
+                                <div className="mt-4 space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {mediaReport.map((item, idx) => (
+                                        <div key={idx} className="flex flex-col p-3 rounded-lg border bg-muted/30 text-xs gap-2">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="font-mono truncate text-muted-foreground">{item.url}</span>
+                                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="shrink-0 hover:text-primary">
+                                                        <ExternalLink className="h-3 w-3" />
+                                                    </a>
+                                                </div>
+                                                <span className={cn(
+                                                    "px-2 py-0.5 rounded-full font-semibold shrink-0 uppercase tracking-wider text-[9px]",
+                                                    item.status === 'unlinked' ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                                                )}>
+                                                    {item.status === 'unlinked' ? 'Unlinked & Moved to Trash' : 'Referenced'}
+                                                </span>
+                                            </div>
+
+                                            {item.sources.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50">
+                                                    <span className="text-muted-foreground italic mr-1">Used in:</span>
+                                                    {item.sources.map((source: any, sIdx: number) => (
+                                                        <div key={sIdx} className="inline-flex items-center gap-1 bg-background px-1.5 py-0.5 rounded border shadow-sm">
+                                                            <span className="font-bold opacity-70">{source.type}:</span>
+                                                            <span className="truncate max-w-[150px]">{source.title}</span>
+                                                            {source.type === 'Entry' && (
+                                                                <Link href={`/entries/${source.id}`} className="hover:text-primary ml-1">
+                                                                    <ExternalLink className="h-2.5 w-2.5" />
+                                                                </Link>
+                                                            )}
+                                                            {source.type === 'Blog Post' && (
+                                                                <Link href={`/dashboard/blog/edit/${source.id}`} className="hover:text-primary ml-1">
+                                                                    <ExternalLink className="h-2.5 w-2.5" />
+                                                                </Link>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
