@@ -61,6 +61,11 @@ export function ProfileForm({ user }: ProfileFormProps) {
     useEffect(() => {
         if (pwdState?.message === "Success") {
             toast.success("Password updated successfully")
+            // Manually clearing inputs because we are not using controlled components for passwords
+            const currentPwd = document.getElementById('currentPassword') as HTMLInputElement
+            const newPwd = document.getElementById('newPassword') as HTMLInputElement
+            if (currentPwd) currentPwd.value = ""
+            if (newPwd) newPwd.value = ""
         } else if (pwdState?.message && pwdState.message !== "Success") {
             toast.error(pwdState.message)
         }

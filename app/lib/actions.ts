@@ -422,12 +422,12 @@ export async function updatePassword(
             data: { passwordHash: hashedPassword }
         })
 
+        revalidatePath("/settings")
         return { message: "Success" }
     } catch (error) {
         console.error("Failed to update password:", error)
         return { message: "Database Error" }
     }
-    return { message: "Success" }
 }
 
 export async function getAppConfig() {
