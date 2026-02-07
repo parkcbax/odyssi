@@ -39,6 +39,13 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Pre-install Prisma CLI to avoid runtime download/delay
+# Pre-install Prisma CLI to avoid runtime download/delay
+RUN npm install -g prisma
+
+# Ensure uploads and backups directories exist and are writable
+RUN mkdir -p /app/public/uploads /app/backups && chown -R nextjs:nodejs /app/public/uploads /app/backups
+
 COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size

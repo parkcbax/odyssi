@@ -69,6 +69,12 @@ export async function generateBackup(options: BackupOptions) {
         if (!userId) {
             const users = await prisma.user.findMany()
             dataToBackup.users = users
+
+            // Fetch Global AppConfig
+            const appConfig = await prisma.appConfig.findFirst()
+            if (appConfig) {
+                dataToBackup.appConfig = appConfig
+            }
         }
     }
 

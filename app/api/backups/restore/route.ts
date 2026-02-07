@@ -98,26 +98,59 @@ export async function POST(req: NextRequest) {
         if (data.type === "EVERYTHING") {
             const isUserAdmin = isAdmin(session.user.email)
 
+            // SECURITY FIX: Verify session user actually exists in DB
+            // If DB was reset (Docker restart), session token ID might be stale.
+            const currentUser = await prisma.user.findUnique({
+                where: { email: session.user.email || "" }
+            })
+
+            if (!currentUser) {
+                return NextResponse.json({ error: "User record not found in database. Please re-login." }, { status: 401 })
+            }
+
+            const currentUserId = currentUser.id
+
             // WIPE and REPLACE
             await prisma.$transaction(async (tx) => {
+
+                // 1. Maintain a map of Old User ID -> New User ID (for ID remapping)
+                const userIdMap = new Map<string, string>()
+
+                // Helper to get valid user ID
+                const getValidUserId = (oldId: string) => {
+                    if (userIdMap.has(oldId)) return userIdMap.get(oldId)
+                    // Fallback to verified existing user ID
+                    return currentUserId
+                }
 
                 // SYSTEM RESTORE LOGIC
                 if (isUserAdmin && data.users && Array.isArray(data.users)) {
                     console.log("Performing System Restore (Admin)...")
 
-                    // 1. Restore Users
+                    // 2. Restore Users First
                     for (const user of data.users) {
+                        // Check if user exists by email (primary key for auth)
+                        const existing = await tx.user.findUnique({ where: { email: user.email } })
+
+                        let targetId = user.id
+
+                        // If user exists, we MUST re-use their existing ID to avoid collisions
+                        if (existing) {
+                            targetId = existing.id
+                        }
+
                         await tx.user.upsert({
                             where: { email: user.email },
                             update: {
                                 name: user.name,
-                                passwordHash: user.passwordHash,
-                                timezone: user.timezone,
                                 image: user.image,
-                                emailVerified: user.emailVerified
+                                // Don't overwrite sensitive fields like password if user exists
                             },
                             create: {
-                                id: user.id, // Preserve ID
+                                // If creating new, try to use backup ID. 
+                                // If that ID matches an existing user with DIFFERENT email (unlikely but possible), Prisma would throw.
+                                // But `user.id` is usually a CUID.
+                                id: user.id,
                                 name: user.name,
                                 email: user.email,
                                 passwordHash: user.passwordHash,
@@ -127,42 +160,38 @@ export async function POST(req: NextRequest) {
                                 createdAt: user.createdAt
                             }
                         })
+
+                        // Map old ID to valid target ID
+                        userIdMap.set(user.id, targetId)
                     }
 
-                    // 2. Wipe Data for restored users (or all data if we want a clean slate? Safest to wipe by ID if possible, but for EVERYTHING restore, maybe we assume wipe all?)
-                    // Current logic was: await tx.journal.deleteMany({ where: { userId } }) which only wipes current session user.
-                    // For System restore we should validly restore data for each user.
-
-                    // Strategy: We will iterate over the data items and use their `userId` / `authorId`
-                    // BUT we should probably clear data first to avoid duplicates if IDs match.
-                    // To be safe and simple for "EVERYTHING": 
-                    // If we just create with specified ID it might conflict if we don't delete.
-                    // Let's delete data for users found in the backup to ensure clean state for them.
-
-                    const userIdsFromBackup = data.users.map((u: any) => u.id)
-                    await tx.journal.deleteMany({ where: { userId: { in: userIdsFromBackup } } })
-                    await tx.tag.deleteMany({ where: { userId: { in: userIdsFromBackup } } })
-                    await tx.blogPost.deleteMany({ where: { authorId: { in: userIdsFromBackup } } })
+                    // Helper to get valid user ID
+                    // Helper to get valid user ID
+                    // 3. Clear existing data for these users
+                    const validUserIds = Array.from(userIdMap.values())
+                    if (validUserIds.length > 0) {
+                        await tx.journal.deleteMany({ where: { userId: { in: validUserIds } } })
+                        await tx.tag.deleteMany({ where: { userId: { in: validUserIds } } })
+                        await tx.blogPost.deleteMany({ where: { authorId: { in: validUserIds } } })
+                    }
 
                 } else {
-                    // Regular User Restore (Old Logic)
-                    // Only wipe current user
-                    await tx.journal.deleteMany({ where: { userId } })
-                    await tx.tag.deleteMany({ where: { userId } })
-                    await tx.blogPost.deleteMany({ where: { authorId: userId } }) // Wipe existing
+                    // Regular User Restore
+                    await tx.journal.deleteMany({ where: { userId: currentUserId } })
+                    await tx.tag.deleteMany({ where: { userId: currentUserId } })
+                    await tx.blogPost.deleteMany({ where: { authorId: currentUserId } })
                 }
 
                 // Restore Tags
                 if (data.tags) {
                     for (const tag of data.tags) {
-                        // If System Restore, allow original userId. Else force current session userId.
-                        const targetUserId = (isUserAdmin && tag.userId) ? tag.userId : userId
+                        const targetUserId = (isUserAdmin && tag.userId) ? getValidUserId(tag.userId) : currentUserId
 
                         await tx.tag.create({
                             data: {
                                 id: tag.id,
                                 name: tag.name,
-                                userId: targetUserId
+                                user: { connect: { id: targetUserId } }
                             }
                         })
                     }
@@ -171,8 +200,7 @@ export async function POST(req: NextRequest) {
                 // Restore Journals & Entries
                 if (data.journals) {
                     for (const j of data.journals) {
-                        // If System Restore, allow original userId. Else force current session userId.
-                        const targetUserId = (isUserAdmin && j.userId) ? j.userId : userId
+                        const targetUserId = (isUserAdmin && j.userId) ? getValidUserId(j.userId) : currentUserId
 
                         await tx.journal.create({
                             data: {
@@ -181,7 +209,7 @@ export async function POST(req: NextRequest) {
                                 description: j.description,
                                 color: j.color,
                                 icon: j.icon,
-                                userId: targetUserId,
+                                user: { connect: { id: targetUserId } },
                                 createdAt: j.createdAt,
                                 entries: {
                                     create: j.entries ? j.entries.map((e: any) => ({
@@ -212,11 +240,10 @@ export async function POST(req: NextRequest) {
                 }
 
                 // Restore Blog Posts
-
                 if (data.blogPosts) {
                     for (const post of data.blogPosts) {
-                        // If System Restore, allow original userId. Else force current session userId.
-                        const targetAuthorId = (isUserAdmin && post.authorId) ? post.authorId : userId
+                        // For Blog Posts, 'authorId' is the key
+                        const targetAuthorId = (isUserAdmin && post.authorId) ? getValidUserId(post.authorId) : currentUserId
 
                         await tx.blogPost.create({
                             data: {
@@ -226,11 +253,42 @@ export async function POST(req: NextRequest) {
                                 content: post.content,
                                 published: post.published,
                                 createdAt: post.createdAt,
-                                authorId: targetAuthorId
+                                author: { connect: { id: targetAuthorId } }
                             }
                         })
                     }
                 }
+                // Restore Global App Config (Singleton)
+                if (data.appConfig) {
+                    const existingConfig = await tx.appConfig.findFirst()
+
+                    if (existingConfig) {
+                        await tx.appConfig.update({
+                            where: { id: existingConfig.id },
+                            data: {
+                                redirectHomeToLogin: data.appConfig.redirectHomeToLogin,
+                                enableBlogging: data.appConfig.enableBlogging,
+                                enableAutoBackup: data.appConfig.enableAutoBackup,
+                                autoBackupInterval: data.appConfig.autoBackupInterval,
+                                enableMultiUser: data.appConfig.enableMultiUser,
+                                enableUserBlogging: data.appConfig.enableUserBlogging
+                            }
+                        })
+                    } else {
+                        await tx.appConfig.create({
+                            data: {
+                                id: data.appConfig.id, // Try to preserve ID if possible
+                                redirectHomeToLogin: data.appConfig.redirectHomeToLogin,
+                                enableBlogging: data.appConfig.enableBlogging,
+                                enableAutoBackup: data.appConfig.enableAutoBackup,
+                                autoBackupInterval: data.appConfig.autoBackupInterval,
+                                enableMultiUser: data.appConfig.enableMultiUser,
+                                enableUserBlogging: data.appConfig.enableUserBlogging
+                            }
+                        })
+                    }
+                }
+
             })
 
         } else if (data.type === "JOURNAL") {
