@@ -132,7 +132,7 @@ export default async function Home() {
                     Start Writing <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href="https://github.com/your-repo/odyssi" target="_blank">
+                <Link href="https://github.com/parkcbax/odyssi" target="_blank">
                   <Button variant="outline" size="lg">
                     GitHub
                   </Button>
