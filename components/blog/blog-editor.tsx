@@ -9,6 +9,7 @@ import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import CharacterCount from '@tiptap/extension-character-count'
+import { CustomHTML } from '@/components/tiptap/html-extension'
 import { useState, useEffect, forwardRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Switch } from "@/components/ui/switch"
@@ -25,7 +26,8 @@ import {
     Image as ImageIcon,
     Link as LinkIcon,
     Loader2,
-    Save
+    Save,
+    Code
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -79,6 +81,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
             TaskList,
             TaskItem.configure({ nested: true }),
             CharacterCount,
+            CustomHTML,
         ],
         content: initialData?.content || '',
         editorProps: {
@@ -213,6 +216,12 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                         isActive={editor?.isActive('link')}
                     >
                         <LinkIcon className="h-4 w-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                        onClick={() => editor?.chain().focus().insertContent({ type: 'customHTML', attrs: { content: '' } }).run()}
+                        title="Insert Custom HTML"
+                    >
+                        <Code className="h-4 w-4" />
                     </ToolbarButton>
                 </div>
             </div>

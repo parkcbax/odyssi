@@ -2,7 +2,8 @@
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
+import { CustomImage } from '@/components/tiptap/image-extension'
+import { CustomHTML } from '@/components/tiptap/html-extension'
 import LinkExtension from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
@@ -20,7 +21,8 @@ export function EntryViewer({ content }: EntryViewerProps) {
         immediatelyRender: false,
         extensions: [
             StarterKit,
-            Image,
+            CustomImage,
+            CustomHTML,
             LinkExtension,
             Underline,
             TaskList,
