@@ -23,13 +23,13 @@ export function RecentEntriesList({ entries }: RecentEntriesListProps) {
                         entries.map((entry) => (
                             <Link key={entry.id} href={`/entries/${entry.id}`}>
                                 <div className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <h4 className="font-medium group-hover:text-primary transition-colors">{entry.title}</h4>
-                                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                    <div className="flex justify-between items-start mb-1 gap-2">
+                                        <h4 className="font-medium group-hover:text-primary transition-colors line-clamp-2 min-w-0">{entry.title}</h4>
+                                        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                                             {formatDistanceToNow(new Date(entry.date), { addSuffix: true })}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-muted-foreground line-clamp-2">
+                                    <p className="text-sm text-muted-foreground line-clamp-2 break-all">
                                         {getContentSnippet(entry.content)}
                                     </p>
                                     <div className="mt-2 flex items-center gap-2">

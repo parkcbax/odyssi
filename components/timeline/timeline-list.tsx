@@ -49,21 +49,44 @@ export function TimelineList({ entries }: TimelineListProps) {
                                 <div className="w-1.5 h-1.5 rounded-full bg-muted group-hover:bg-primary transition-colors" />
                             </div>
 
-                            <div className={`w-full md:w-[calc(50%-1.5rem)] ml-8 md:ml-0 ${idx % 2 === 0 ? 'md:mr-auto' : 'md:ml-auto'}`}>
-                                <Link href={`/entries/${entry.id}`}>
-                                    <Card className="hover:shadow-md transition-all group-hover:ring-1 ring-primary/20">
+                            <div className={`flex-1 md:w-[calc(50%-1.5rem)] md:flex-none ml-8 md:ml-0 ${idx % 2 === 0 ? 'md:mr-auto' : 'md:ml-auto'}`}>
+                                <Link href={`/entries/${entry.id}`} className="block w-full min-w-0">
+                                    <Card className="hover:shadow-md transition-all group-hover:ring-1 ring-primary/20 w-full overflow-hidden">
                                         <CardContent className="p-4">
                                             <div className="flex gap-4">
-                                                <div className="flex-1 space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-medium text-muted-foreground">
-                                                            {format(entry.date, 'EEE, MMM d')}
-                                                        </span>
-                                                        {entry.mood && (
-                                                            <span className="text-lg">{entry.mood}</span>
-                                                        )}
+                                                <div className="flex-1 space-y-1 min-w-0">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                                                                {format(entry.date, 'EEE, MMM d')}
+                                                            </span>
+                                                            {entry.mood && (
+                                                                <span className="text-lg">{entry.mood}</span>
+                                                            )}
+                                                        </div>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="shrink-0 h-fit max-w-[100px] truncate hidden sm:inline-flex"
+                                                            style={{
+                                                                borderColor: entry.journal.color,
+                                                                color: entry.journal.color
+                                                            }}
+                                                        >
+                                                            {entry.journal.title}
+                                                        </Badge>
+                                                        {/* Mobile Badge - shorter or icon only? Or just same badge but small? */}
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="shrink-0 h-fit max-w-[80px] truncate sm:hidden text-[10px] px-1 py-0"
+                                                            style={{
+                                                                borderColor: entry.journal.color,
+                                                                color: entry.journal.color
+                                                            }}
+                                                        >
+                                                            {entry.journal.title}
+                                                        </Badge>
                                                     </div>
-                                                    <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">
+                                                    <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2 break-words">
                                                         {entry.title}
                                                     </h3>
                                                 </div>
@@ -77,20 +100,10 @@ export function TimelineList({ entries }: TimelineListProps) {
                                                         />
                                                     </div>
                                                 )}
-                                                <Badge
-                                                    variant="outline"
-                                                    className="shrink-0 h-fit"
-                                                    style={{
-                                                        borderColor: entry.journal.color,
-                                                        color: entry.journal.color
-                                                    }}
-                                                >
-                                                    {entry.journal.title}
-                                                </Badge>
                                             </div>
 
                                             {entry.content && (
-                                                <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                                                <p className="mt-2 text-sm text-muted-foreground line-clamp-2 break-all">
                                                     {getContentSnippet(entry.content)}
                                                 </p>
                                             )}

@@ -172,6 +172,8 @@
   html,
   body {
     @apply bg-background text-foreground;
+    overflow-wrap: anywhere;
+    /* Prevent long words from causing overflow globally */
   }
 }
 

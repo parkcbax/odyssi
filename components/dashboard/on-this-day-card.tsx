@@ -13,12 +13,12 @@ export function OnThisDayCard({ entries }: OnThisDayCardProps) {
     return (
         <Card className="h-full flex flex-col">
             <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                        <CalendarClock className="h-5 w-5 text-muted-foreground" />
-                        On This Day
+                <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2 min-w-0">
+                        <CalendarClock className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <span className="truncate">On This Day</span>
                     </CardTitle>
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="text-xs text-muted-foreground font-mono whitespace-nowrap shrink-0">
                         {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                     </span>
                 </div>

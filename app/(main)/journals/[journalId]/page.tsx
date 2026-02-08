@@ -89,8 +89,8 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {journal.entries.map((entry) => (
-                            <Link key={entry.id} href={`/entries/${entry.id}`}>
-                                <Card className="hover:bg-muted/50 transition-colors h-full flex flex-col">
+                            <Link key={entry.id} href={`/entries/${entry.id}`} className="min-w-0">
+                                <Card className="hover:bg-muted/50 transition-colors h-full flex flex-col overflow-hidden">
                                     <CardHeader className="pb-2">
                                         <div className="flex justify-between items-start gap-2">
                                             <CardTitle className="text-lg leading-tight line-clamp-1" title={entry.title}>
@@ -114,7 +114,7 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                                     <CardContent className="flex-1 flex flex-col gap-4">
                                         <div className="flex gap-4 flex-1">
                                             <div className="flex-1 space-y-2">
-                                                <p className="text-sm text-muted-foreground line-clamp-3">
+                                                <p className="text-sm text-muted-foreground line-clamp-3 break-all">
                                                     {getContentSnippet(entry.content)}
                                                 </p>
                                             </div>
