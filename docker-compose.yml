@@ -15,6 +15,7 @@ services:
       AUTH_SECRET: ${AUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@odyssi.com}
+      # ADMIN_PASSWORD: ${ADMIN_PASSWORD} # Uncomment to reset admin password
     command: >
       sh -c "npx prisma migrate deploy && node server.js"
     volumes:

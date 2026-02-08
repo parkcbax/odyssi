@@ -147,7 +147,9 @@ export async function POST(req: NextRequest) {
                                 // Overwrite sensitive fields to ensure exact mirror of backup
                                 passwordHash: user.passwordHash,
                                 emailVerified: user.emailVerified,
-                                timezone: user.timezone
+                                timezone: user.timezone,
+                                // Restore timestamps if available
+                                updatedAt: user.updatedAt ? new Date(user.updatedAt) : undefined
                             },
                             create: {
                                 // If creating new, try to use backup ID. 
@@ -160,7 +162,8 @@ export async function POST(req: NextRequest) {
                                 timezone: user.timezone || "UTC",
                                 image: user.image,
                                 emailVerified: user.emailVerified,
-                                createdAt: user.createdAt
+                                createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+                                updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date()
                             }
                         })
 
@@ -168,8 +171,6 @@ export async function POST(req: NextRequest) {
                         userIdMap.set(user.id, targetId)
                     }
 
-                    // Helper to get valid user ID
-                    // Helper to get valid user ID
                     // 3. Clear existing data for these users
                     const validUserIds = Array.from(userIdMap.values())
                     if (validUserIds.length > 0) {
@@ -194,7 +195,7 @@ export async function POST(req: NextRequest) {
                             data: {
                                 id: tag.id,
                                 name: tag.name,
-                                user: { connect: { id: targetUserId } }
+                                user: { connect: { id: targetUserId } },
                             }
                         })
                     }
@@ -213,9 +214,8 @@ export async function POST(req: NextRequest) {
                                 color: j.color,
                                 icon: j.icon,
                                 user: { connect: { id: targetUserId } },
-                                user: { connect: { id: targetUserId } },
-                                createdAt: j.createdAt,
-                                updatedAt: j.updatedAt,
+                                createdAt: j.createdAt ? new Date(j.createdAt) : new Date(),
+                                updatedAt: j.updatedAt ? new Date(j.updatedAt) : new Date(),
                                 entries: {
                                     create: j.entries ? j.entries.map((e: any) => ({
                                         id: e.id,
@@ -224,9 +224,8 @@ export async function POST(req: NextRequest) {
                                         date: e.date,
                                         mood: e.mood,
                                         locationName: e.locationName,
-                                        locationName: e.locationName,
-                                        createdAt: e.createdAt,
-                                        updatedAt: e.updatedAt,
+                                        createdAt: e.createdAt ? new Date(e.createdAt) : new Date(),
+                                        updatedAt: e.updatedAt ? new Date(e.updatedAt) : new Date(),
                                         images: {
                                             create: e.images ? e.images.map((img: any) => ({
                                                 id: img.id,
@@ -259,9 +258,8 @@ export async function POST(req: NextRequest) {
                                 slug: post.slug,
                                 content: post.content,
                                 published: post.published,
-                                published: post.published,
-                                createdAt: post.createdAt,
-                                updatedAt: post.updatedAt,
+                                createdAt: post.createdAt ? new Date(post.createdAt) : new Date(),
+                                updatedAt: post.updatedAt ? new Date(post.updatedAt) : new Date(),
                                 author: { connect: { id: targetAuthorId } }
                             }
                         })
