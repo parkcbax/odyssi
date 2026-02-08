@@ -28,11 +28,6 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
         }
     })
 
-    if (entry) {
-        console.log("DEBUG: Entry Content Type:", typeof entry.content);
-        console.log("DEBUG: Entry Content Preview:", JSON.stringify(entry.content).substring(0, 200));
-    }
-
     if (!entry) {
         notFound()
     }
@@ -67,7 +62,13 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
                         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4" />
-                                {new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                {new Date(entry.date).toLocaleDateString('en-US', {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    timeZone: session.user.timezone
+                                })}
                             </div>
                             {entry.locationName && (
                                 <Link

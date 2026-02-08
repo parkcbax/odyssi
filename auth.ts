@@ -61,12 +61,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 token.id = user.id
                 token.name = user.name
                 token.email = user.email
+                token.timezone = (user as any).timezone || "UTC"
             }
 
             // Handle session update
             if (trigger === "update" && session) {
                 token.name = session.name || token.name
                 token.email = session.email || token.email
+                token.timezone = session.timezone || token.timezone
             }
 
             return token
@@ -76,6 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 session.user.id = token.id as string
                 session.user.name = token.name as string
                 session.user.email = token.email as string
+                session.user.timezone = token.timezone as string
             }
             return session
         }

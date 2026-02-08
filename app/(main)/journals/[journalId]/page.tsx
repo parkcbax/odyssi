@@ -101,7 +101,7 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                                         <CardDescription className="flex flex-col gap-1 text-xs">
                                             <span className="flex items-center gap-1">
                                                 <Calendar className="h-3 w-3" />
-                                                {new Date(entry.date).toLocaleDateString()}
+                                                {new Date(entry.date).toLocaleDateString('en-US', { timeZone: session.user.timezone })}
                                             </span>
                                             {entry.locationName && (
                                                 <span className="flex items-center gap-1 truncate" title={entry.locationName}>
