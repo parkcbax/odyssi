@@ -28,6 +28,11 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
         }
     })
 
+    if (entry) {
+        console.log("DEBUG: Entry Content Type:", typeof entry.content);
+        console.log("DEBUG: Entry Content Preview:", JSON.stringify(entry.content).substring(0, 200));
+    }
+
     if (!entry) {
         notFound()
     }
