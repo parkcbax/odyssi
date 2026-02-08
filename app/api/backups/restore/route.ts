@@ -213,7 +213,9 @@ export async function POST(req: NextRequest) {
                                 color: j.color,
                                 icon: j.icon,
                                 user: { connect: { id: targetUserId } },
+                                user: { connect: { id: targetUserId } },
                                 createdAt: j.createdAt,
+                                updatedAt: j.updatedAt,
                                 entries: {
                                     create: j.entries ? j.entries.map((e: any) => ({
                                         id: e.id,
@@ -222,7 +224,9 @@ export async function POST(req: NextRequest) {
                                         date: e.date,
                                         mood: e.mood,
                                         locationName: e.locationName,
+                                        locationName: e.locationName,
                                         createdAt: e.createdAt,
+                                        updatedAt: e.updatedAt,
                                         images: {
                                             create: e.images ? e.images.map((img: any) => ({
                                                 id: img.id,
@@ -255,7 +259,9 @@ export async function POST(req: NextRequest) {
                                 slug: post.slug,
                                 content: post.content,
                                 published: post.published,
+                                published: post.published,
                                 createdAt: post.createdAt,
+                                updatedAt: post.updatedAt,
                                 author: { connect: { id: targetAuthorId } }
                             }
                         })

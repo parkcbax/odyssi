@@ -12,10 +12,31 @@ export default async function JournalsPage() {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
 
-    const journals = await prisma.journal.findMany({
+    const journalsData = await prisma.journal.findMany({
         where: { userId: session.user.id },
-        orderBy: { updatedAt: 'desc' }
+        include: {
+            entries: {
+                orderBy: { updatedAt: 'desc' },
+                take: 1,
+                select: { updatedAt: true }
+            }
+        }
     })
+
+    // Sort by latest activity (either journal update or latest entry update)
+    const journals = journalsData.map(journal => {
+        const latestEntryDate = journal.entries[0]?.updatedAt
+        const journalDate = journal.updatedAt
+        // Use the most recent of the two
+        const lastActive = latestEntryDate && latestEntryDate > journalDate
+            ? latestEntryDate
+            : journalDate
+
+        return {
+            ...journal,
+            lastActive
+        }
+    }).sort((a, b) => b.lastActive.getTime() - a.lastActive.getTime())
 
     return (
         <div className="flex flex-col gap-4">
@@ -57,7 +78,7 @@ export default async function JournalsPage() {
                                             className="h-2 w-2 rounded-full"
                                             style={{ backgroundColor: (journal as any).color }}
                                         />
-                                        Last updated: {new Date(journal.updatedAt).toLocaleDateString()}
+                                        Last updated: {new Date(journal.lastActive).toLocaleDateString()}
                                     </p>
                                 </CardContent>
                             </Card>
