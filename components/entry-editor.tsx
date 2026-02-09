@@ -14,6 +14,7 @@ import CharacterCount from '@tiptap/extension-character-count'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { CodeBlockComponent } from './tiptap/code-block-component'
+import { LocationExtension } from '@/components/tiptap/location-extension'
 import { all, createLowlight } from 'lowlight'
 const lowlight = createLowlight(all)
 
@@ -57,7 +58,8 @@ import {
     Code,
     SquareCode,
     Braces,
-    X
+    X,
+    Map
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -137,6 +139,7 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                     return ReactNodeViewRenderer(CodeBlockComponent)
                 },
             }),
+            LocationExtension,
         ],
         content: initialData?.content || '',
         editorProps: {
@@ -360,6 +363,35 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                         >
                             <LinkIcon className="h-4 w-4" />
                         </ToolbarButton>
+
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <ToolbarButton title="Insert Map Block">
+                                    <Map className="h-4 w-4" />
+                                </ToolbarButton>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-96 p-4" align="start">
+                                <div className="space-y-4">
+                                    <h4 className="font-medium leading-none">Insert Location Block</h4>
+                                    <div className="h-[300px] w-full border rounded-md overflow-hidden relative">
+                                        <LocationPicker
+                                            lat={null}
+                                            lng={null}
+                                            onLocationSelect={(lat, lng) => {
+                                                // Ask for label or default
+                                                const label = prompt("Location Name (optional):", `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                                                editor?.chain().focus().insertContent({
+                                                    type: 'locationMap',
+                                                    attrs: { lat, lng, label: label || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }
+                                                }).run()
+                                                // Close popover logic would be ideal but for now this works as it inserts and user clicks away
+                                            }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Click on the map to insert this location into your entry.</p>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
 
                         <div className="w-px h-6 bg-border mx-1" />
 

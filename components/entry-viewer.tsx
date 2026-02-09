@@ -11,6 +11,7 @@ import TaskItem from '@tiptap/extension-task-item'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { CodeBlockComponent } from '@/components/tiptap/code-block-component'
+import { LocationExtension } from '@/components/tiptap/location-extension'
 import { all, createLowlight } from 'lowlight'
 const lowlight = createLowlight(all)
 import { useEffect, useState } from 'react'
@@ -52,6 +53,7 @@ export function EntryViewer({ content, locationLat, locationLng, locationName }:
                     return ReactNodeViewRenderer(CodeBlockComponent)
                 },
             }),
+            LocationExtension,
         ],
         content: content,
         editorProps: {
