@@ -1,9 +1,7 @@
-import { TimelineList } from "@/components/timeline/timeline-list"
-import { TimelineCalendar } from "@/components/timeline/timeline-calendar"
+import { TimelineViews } from "@/components/timeline/timeline-views"
 import { Suspense } from "react"
 import Link from "next/link"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { List, Calendar as CalendarIcon } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
@@ -68,28 +66,7 @@ export default async function TimelinePage({
                 </div>
             </div>
 
-            <Tabs defaultValue="list" className="w-full">
-                <div className="flex justify-center mb-8">
-                    <TabsList className="grid w-[400px] grid-cols-2">
-                        <TabsTrigger value="list" className="flex items-center gap-2">
-                            <List className="h-4 w-4" />
-                            List View
-                        </TabsTrigger>
-                        <TabsTrigger value="calendar" className="flex items-center gap-2">
-                            <CalendarIcon className="h-4 w-4" />
-                            Calendar View
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
-
-                <TabsContent value="list" className="mt-0">
-                    <TimelineList entries={entries} />
-                </TabsContent>
-
-                <TabsContent value="calendar" className="mt-0">
-                    <TimelineCalendar entries={entries} />
-                </TabsContent>
-            </Tabs>
+            <TimelineViews entries={entries} />
         </div>
     )
 }

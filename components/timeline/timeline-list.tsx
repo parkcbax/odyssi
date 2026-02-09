@@ -1,3 +1,5 @@
+"use client"
+
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { format } from "date-fns"
