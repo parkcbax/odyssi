@@ -14,18 +14,21 @@ import { getAppConfig, updateAppFeatures } from "@/app/lib/actions"
 import { cleanUnreferencedMedia } from "@/app/lib/actions-media"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 interface BackupViewProps {
     journals: { id: string, title: string }[]
     initialAutoBackup: boolean
     initialInterval: string
+    lastAutoBackupAt?: Date | string | null
 }
 
-export function BackupView({ journals, initialAutoBackup, initialInterval }: BackupViewProps) {
+export function BackupView({ journals, initialAutoBackup, initialInterval, lastAutoBackupAt }: BackupViewProps) {
     const [backupType, setBackupType] = useState<"EVERYTHING" | "JOURNAL">("EVERYTHING")
     const [selectedJournal, setSelectedJournal] = useState<string>("")
     const [splitType, setSplitType] = useState<"SINGLE" | "MULTIPART">("SINGLE")
     const [partSize, setPartSize] = useState<"250MB" | "500MB">("250MB")
+    const router = useRouter()
 
     const [isBackingUp, setIsBackingUp] = useState(false)
     const [progress, setProgress] = useState(0)
@@ -41,6 +44,32 @@ export function BackupView({ journals, initialAutoBackup, initialInterval }: Bac
     const [enableAutoBackup, setEnableAutoBackup] = useState(initialAutoBackup)
     const [autoBackupInterval, setAutoBackupInterval] = useState(initialInterval)
     const [isSavingSettings, setIsSavingSettings] = useState(false)
+
+    // Calculate schedule
+    const getLastBackupDate = () => {
+        if (!lastAutoBackupAt) return null
+        return new Date(lastAutoBackupAt)
+    }
+
+    const getNextBackupDate = () => {
+        if (!enableAutoBackup) return null
+        const last = getLastBackupDate()
+        if (!last) return new Date() // If never backed up, it's due now
+
+        const next = new Date(last)
+        switch (autoBackupInterval) {
+            case "1Day": next.setDate(next.getDate() + 1); break;
+            case "1Week": next.setDate(next.getDate() + 7); break;
+            case "1Month": next.setDate(next.getDate() + 30); break;
+            case "6Month": next.setMonth(next.getMonth() + 6); break;
+            case "1Year": next.setFullYear(next.getFullYear() + 1); break;
+            default: next.setDate(next.getDate() + 7);
+        }
+        return next
+    }
+
+    const lastDate = getLastBackupDate()
+    const nextDate = getNextBackupDate()
 
     useEffect(() => {
         // Load settings
@@ -73,14 +102,29 @@ export function BackupView({ journals, initialAutoBackup, initialInterval }: Bac
 
             const config = await getAppConfig()
 
-            if (config.redirectHomeToLogin) formData.append("redirectHomeToLogin", "on")
-            if (config.enableBlogging) formData.append("enableBlogging", "on")
+            if (config?.redirectHomeToLogin) formData.append("redirectHomeToLogin", "on")
+            if (config?.enableBlogging) formData.append("enableBlogging", "on")
 
             if (enableAutoBackup) formData.append("enableAutoBackup", "on")
             formData.append("autoBackupInterval", autoBackupInterval)
 
             await updateAppFeatures(null, formData)
-            toast.success("Auto backup settings saved")
+
+            if (enableAutoBackup) {
+                toast.info("Settings saved. Checking backup schedule...")
+                // Trigger immediate check
+                const cronRes = await fetch("/api/cron/backup")
+                const cronData = await cronRes.json()
+
+                if (cronData.message === "Auto backup completed") {
+                    toast.success("Initial backup created successfully!")
+                    router.refresh()
+                } else {
+                    toast.success("Auto backup enabled. Next run is scheduled.")
+                }
+            } else {
+                toast.success("Auto backup settings saved")
+            }
 
         } catch (error) {
             toast.error("Failed to save settings")
@@ -188,19 +232,37 @@ export function BackupView({ journals, initialAutoBackup, initialInterval }: Bac
                     </div>
 
                     {enableAutoBackup && (
-                        <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2">
-                            <Label>Backup Frequency</Label>
-                            <Select value={autoBackupInterval} onValueChange={setAutoBackupInterval}>
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Select Frequency" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="1Week">Every 1 Week</SelectItem>
-                                    <SelectItem value="1Month">Every 1 Month</SelectItem>
-                                    <SelectItem value="6Month">Every 6 Months</SelectItem>
-                                    <SelectItem value="1Year">Every 1 Year</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2">
+                            <div className="space-y-2">
+                                <Label>Backup Frequency</Label>
+                                <Select value={autoBackupInterval} onValueChange={setAutoBackupInterval}>
+                                    <SelectTrigger className="w-[200px]">
+                                        <SelectValue placeholder="Select Frequency" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1Day">Every 1 Day</SelectItem>
+                                        <SelectItem value="1Week">Every 1 Week</SelectItem>
+                                        <SelectItem value="1Month">Every 1 Month</SelectItem>
+                                        <SelectItem value="6Month">Every 6 Months</SelectItem>
+                                        <SelectItem value="1Year">Every 1 Year</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="rounded-lg border bg-muted/50 p-3 space-y-1.5 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Last Backup:</span>
+                                    <span className="font-medium">
+                                        {lastDate ? lastDate.toLocaleString() : "Never"}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between border-t pt-1.5 mt-1.5">
+                                    <span className="text-muted-foreground">Next Scheduled:</span>
+                                    <span className="font-semibold text-primary">
+                                        {nextDate ? nextDate.toLocaleString() : "Pending..."}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     )}
 

@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
 
             // Logic for intervals
             switch (interval) {
+                case "1Day":
+                    if (diff > 1 * oneDay) shouldBackup = true;
+                    break;
                 case "1Week":
                     if (diff > 7 * oneDay) shouldBackup = true;
                     break;

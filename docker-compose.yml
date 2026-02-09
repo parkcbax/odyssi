@@ -17,7 +17,7 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@odyssi.com}
       # ADMIN_PASSWORD: ${ADMIN_PASSWORD} # Uncomment to reset admin password
     command: >
-      sh -c "npx prisma migrate deploy && node server.js"
+      sh -c "npx prisma migrate deploy && node scripts/cron.js & node server.js"
     volumes:
       - ./public/uploads:/app/public/uploads
       - ./backups:/app/backups

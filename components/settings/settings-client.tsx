@@ -130,6 +130,7 @@ export function SettingsClient({ user, journals, appConfig, isUserAdmin }: Setti
                                 journals={journals}
                                 initialAutoBackup={appConfig.enableAutoBackup}
                                 initialInterval={appConfig.autoBackupInterval}
+                                lastAutoBackupAt={appConfig.lastAutoBackupAt}
                             />
                         </TabsContent>
 
