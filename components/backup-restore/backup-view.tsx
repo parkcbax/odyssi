@@ -104,6 +104,9 @@ export function BackupView({ journals, initialAutoBackup, initialInterval, lastA
 
             if (config?.redirectHomeToLogin) formData.append("redirectHomeToLogin", "on")
             if (config?.enableBlogging) formData.append("enableBlogging", "on")
+            if (config?.enableMultiUser) formData.append("enableMultiUser", "on")
+            if (config?.enableUserBlogging) formData.append("enableUserBlogging", "on")
+            if (config?.analyticSnippet) formData.append("analyticSnippet", config.analyticSnippet)
 
             if (enableAutoBackup) formData.append("enableAutoBackup", "on")
             formData.append("autoBackupInterval", autoBackupInterval)
