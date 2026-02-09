@@ -4,6 +4,8 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { CustomImage } from '@/components/tiptap/image-extension'
+import LocationPicker from '@/components/location-picker'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import LinkExtension from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
@@ -86,6 +88,8 @@ interface EntryData {
     date: Date
     mood?: string
     locationName?: string
+    locationLat?: number | null
+    locationLng?: number | null
     tags?: string[]
 }
 
@@ -103,6 +107,8 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
     const [date, setDate] = useState<Date>(initialData?.date ? new Date(initialData.date) : new Date())
     const [mood, setMood] = useState<string>(initialData?.mood || '')
     const [locationName, setLocationName] = useState<string>(initialData?.locationName || '')
+    const [locationLat, setLocationLat] = useState<number | null>(initialData?.locationLat || null)
+    const [locationLng, setLocationLng] = useState<number | null>(initialData?.locationLng || null)
     const [tags, setTags] = useState<string>(initialData?.tags ? initialData.tags.join(', ') : '')
 
     const [isSaving, setIsSaving] = useState(false)
@@ -164,6 +170,8 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
         formData.append('date', date.toISOString())
         if (mood) formData.append('mood', mood)
         if (locationName) formData.append('locationName', locationName)
+        if (locationLat) formData.append('locationLat', locationLat.toString())
+        if (locationLng) formData.append('locationLng', locationLng.toString())
         if (tags) formData.append('tags', tags)
 
         let result;
@@ -426,14 +434,59 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                                     <MapPin className="h-4 w-4" />
                                 </ToolbarButton>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4" align="start">
-                                <div className="space-y-2">
-                                    <h4 className="font-medium leading-none">Location</h4>
-                                    <Input
-                                        value={locationName}
-                                        onChange={(e) => setLocationName(e.target.value)}
-                                        placeholder="e.g. Starbucks, Home, Paris..."
-                                    />
+                            <PopoverContent className="w-96 p-4" align="start">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-medium leading-none">Location</h4>
+                                    </div>
+
+                                    <Tabs defaultValue="text" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-2">
+                                            <TabsTrigger value="text">Manual Text</TabsTrigger>
+                                            <TabsTrigger value="map">Map / GPS</TabsTrigger>
+                                        </TabsList>
+
+                                        <TabsContent value="text" className="space-y-2 mt-4">
+                                            <div className="space-y-1">
+                                                <label className="text-xs text-muted-foreground">Location Name</label>
+                                                <Input
+                                                    value={locationName}
+                                                    onChange={(e) => setLocationName(e.target.value)}
+                                                    placeholder="e.g. Starbucks, Home, Paris..."
+                                                />
+                                            </div>
+                                        </TabsContent>
+
+                                        <TabsContent value="map" className="mt-4">
+                                            <div className="space-y-4">
+                                                <div className="h-[300px] w-full border rounded-md overflow-hidden relative">
+                                                    <LocationPicker
+                                                        lat={locationLat}
+                                                        lng={locationLng}
+                                                        onLocationSelect={(lat, lng) => {
+                                                            setLocationLat(lat)
+                                                            setLocationLng(lng)
+                                                            // Optional: reverse geocode later if needed
+                                                            if (!locationName) {
+                                                                setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs text-muted-foreground">Location Name (Optional)</label>
+                                                    <Input
+                                                        value={locationName}
+                                                        onChange={(e) => setLocationName(e.target.value)}
+                                                        placeholder="Name for this spot..."
+                                                    />
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Saved: {locationLat ? `${locationLat.toFixed(4)}, ${locationLng?.toFixed(4)}` : "No coordinates set"}
+                                                </div>
+                                            </div>
+                                        </TabsContent>
+                                    </Tabs>
                                 </div>
                             </PopoverContent>
                         </Popover>

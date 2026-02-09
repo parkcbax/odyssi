@@ -16,11 +16,20 @@ const lowlight = createLowlight(all)
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
+import { MapPin } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+// Dynamically import map to avoid SSR issues with Leaflet
+const EntryMap = dynamic(() => import('@/components/entry-map'), { ssr: false })
+
 interface EntryViewerProps {
     content: any
+    locationLat?: number | null
+    locationLng?: number | null
+    locationName?: string
 }
 
-export function EntryViewer({ content }: EntryViewerProps) {
+export function EntryViewer({ content, locationLat, locationLng, locationName }: EntryViewerProps) {
     const editor = useEditor({
         editable: false,
         immediatelyRender: false,
@@ -59,5 +68,26 @@ export function EntryViewer({ content }: EntryViewerProps) {
 
     if (!mounted) return null
 
-    return <EditorContent editor={editor} />
+    return (
+        <div className="space-y-6">
+            <EditorContent editor={editor} />
+
+            {typeof locationLat === 'number' && typeof locationLng === 'number' && (
+                <div className="mt-8 border-t pt-8">
+                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        {locationName || "Location"}
+                    </h3>
+                    <div className="rounded-lg overflow-hidden border shadow-sm">
+                        <EntryMap
+                            key={`${locationLat}-${locationLng}`}
+                            lat={locationLat}
+                            lng={locationLng}
+                            locationName={locationName || undefined}
+                        />
+                    </div>
+                </div>
+            )}
+        </div>
+    )
 }

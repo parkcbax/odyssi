@@ -105,7 +105,12 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
 
                     <div className="border-t pt-8">
                         {entry.content ? (
-                            <EntryViewer content={entry.content} />
+                            <EntryViewer
+                                content={entry.content}
+                                locationLat={entry.locationLat}
+                                locationLng={entry.locationLng}
+                                locationName={entry.locationName || undefined}
+                            />
                         ) : (
                             <p className="text-muted-foreground italic">No content written.</p>
                         )}

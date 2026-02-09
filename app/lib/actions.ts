@@ -188,6 +188,8 @@ const CreateEntrySchema = z.object({
     mood: z.string().nullish(),
     locationName: z.string().nullish(),
     tags: z.string().nullish(),
+    locationLat: z.number().nullish(),
+    locationLng: z.number().nullish(),
 })
 
 export async function createEntry(
@@ -205,6 +207,8 @@ export async function createEntry(
         mood: formData.get("mood"),
         locationName: formData.get("locationName"),
         tags: formData.get("tags"),
+        locationLat: formData.get("locationLat") ? parseFloat(formData.get("locationLat") as string) : null,
+        locationLng: formData.get("locationLng") ? parseFloat(formData.get("locationLng") as string) : null,
     })
 
     if (!validatedFields.success) {
@@ -226,7 +230,10 @@ export async function createEntry(
                 journalId,
                 date: date ? new Date(date) : new Date(),
                 mood,
+                mood,
                 locationName,
+                locationLat: validatedFields.data.locationLat,
+                locationLng: validatedFields.data.locationLng,
                 tags: {
                     connectOrCreate: tagList.map(tag => ({
                         where: { name_userId: { name: tag, userId } },
@@ -254,6 +261,8 @@ const UpdateEntrySchema = z.object({
     mood: z.string().nullish(),
     locationName: z.string().nullish(),
     tags: z.string().nullish(),
+    locationLat: z.number().nullish(),
+    locationLng: z.number().nullish(),
 })
 
 export async function updateEntry(
@@ -272,6 +281,8 @@ export async function updateEntry(
         mood: formData.get("mood"),
         locationName: formData.get("locationName"),
         tags: formData.get("tags"),
+        locationLat: formData.get("locationLat") ? parseFloat(formData.get("locationLat") as string) : null,
+        locationLng: formData.get("locationLng") ? parseFloat(formData.get("locationLng") as string) : null,
     })
 
     if (!validatedFields.success) {
@@ -295,6 +306,8 @@ export async function updateEntry(
                 date: date ? new Date(date) : undefined,
                 mood,
                 locationName,
+                locationLat: validatedFields.data.locationLat,
+                locationLng: validatedFields.data.locationLng,
                 tags: {
                     set: [],
                     connectOrCreate: tagList.map(tag => ({
