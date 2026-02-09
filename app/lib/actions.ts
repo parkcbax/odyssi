@@ -456,19 +456,8 @@ export async function getAppConfig() {
         }
         return config
     } catch (error) {
-        console.warn("Could not fetch app config (database might be unavailable during build):", error)
-        return {
-            id: "default",
-            redirectHomeToLogin: false,
-            enableBlogging: false,
-            enableAutoBackup: false,
-            enableMultiUser: false,
-            enableUserBlogging: false,
-            autoBackupInterval: "1Week",
-            analyticSnippet: "",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        }
+        console.warn("Could not fetch app config (database might be unavailable):", error)
+        return null
     }
 }
 

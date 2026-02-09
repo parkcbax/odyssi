@@ -71,7 +71,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${kanit.variable} ${prompt.variable} ${roboto.variable} ${lora.variable}`} suppressHydrationWarning>
       <head>
-        {!!config.analyticSnippet && (
+        {!!config?.analyticSnippet && (
           <AnalyticsInjector snippet={config.analyticSnippet} />
         )}
       </head>

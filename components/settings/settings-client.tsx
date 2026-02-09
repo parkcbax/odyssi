@@ -37,6 +37,22 @@ export function SettingsClient({ user, journals, appConfig, isUserAdmin }: Setti
         )
     }
 
+    if (!appConfig) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+                    <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+                </div>
+                <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-lg text-destructive">
+                    <h3 className="font-semibold">Configuration Load Error</h3>
+                    <p>Could not load application settings. The database might be unavailable.</p>
+                    <p className="mt-2 text-sm opacity-80">Please refresh the page to try again. Forms are disabled to prevent data loss.</p>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6">
             <div>

@@ -77,7 +77,7 @@ export default async function Home() {
     getAppConfig()
   ])
 
-  if (config.redirectHomeToLogin && !session) {
+  if (config?.redirectHomeToLogin && !session) {
     redirect("/login")
   }
 
@@ -86,7 +86,7 @@ export default async function Home() {
   }
 
   // Fetch blog posts if enabled
-  const recentPosts = config.enableBlogging
+  const recentPosts = config?.enableBlogging
     ? await prisma.blogPost.findMany({
       where: { published: true },
       orderBy: { createdAt: 'desc' },
@@ -108,7 +108,7 @@ export default async function Home() {
           <Link className="text-sm font-medium hover:underline underline-offset-4" href="/docs">
             Documentation
           </Link>
-          {config.enableBlogging && (
+          {config?.enableBlogging && (
             <Link className="text-sm font-medium hover:underline underline-offset-4" href="#blog">
               Blog
             </Link>
@@ -163,7 +163,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {config.enableBlogging && recentPosts.length > 0 && (
+        {config?.enableBlogging && recentPosts.length > 0 && (
           <section id="blog" className="w-full py-12 md:py-24 lg:py-32 bg-muted/30">
             <div className="container px-4 md:px-6 mx-auto">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-5xl/none mb-8 text-center">
