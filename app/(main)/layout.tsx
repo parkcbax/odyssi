@@ -18,10 +18,10 @@ export default async function MainLayout({
     return (
         <SidebarProvider>
             <AppSidebar
-                enableBlogging={config.enableBlogging}
+                enableBlogging={config?.enableBlogging ?? false}
                 isAdmin={isUserAdmin}
-                enableMultiUser={config.enableMultiUser}
-                enableUserBlogging={config.enableUserBlogging}
+                enableMultiUser={config?.enableMultiUser ?? false}
+                enableUserBlogging={config?.enableUserBlogging ?? false}
             />
             <main className="w-full">
                 <div className="p-4">

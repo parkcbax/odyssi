@@ -230,7 +230,6 @@ export async function createEntry(
                 journalId,
                 date: date ? new Date(date) : new Date(),
                 mood,
-                mood,
                 locationName,
                 locationLat: validatedFields.data.locationLat,
                 locationLng: validatedFields.data.locationLng,
@@ -553,7 +552,7 @@ export async function createBlogPost(prevState: any, formData: FormData) {
     const config = await getAppConfig()
     const userIsAdmin = isAdmin(session.user.email)
 
-    if (!userIsAdmin && !config.enableUserBlogging) {
+    if (!userIsAdmin && !config?.enableUserBlogging) {
         return { message: "You do not have permission to create blog posts." }
     }
 
@@ -641,7 +640,7 @@ export async function updateBlogPost(prevState: any, formData: FormData) {
     const config = await getAppConfig()
     const userIsAdmin = isAdmin(session.user.email)
 
-    if (!userIsAdmin && !config.enableUserBlogging) {
+    if (!userIsAdmin && !config?.enableUserBlogging) {
         return { message: "You do not have permission to manage blog posts." }
     }
 
@@ -707,7 +706,7 @@ export async function deleteBlogPost(id: string) {
     const config = await getAppConfig()
     const userIsAdmin = isAdmin(session.user.email)
 
-    if (!userIsAdmin && !config.enableUserBlogging) {
+    if (!userIsAdmin && !config?.enableUserBlogging) {
         return { message: "You do not have permission to delete blog posts." }
     }
 
