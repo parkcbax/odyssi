@@ -51,8 +51,8 @@ export function JournalActions({ journal }: JournalActionsProps) {
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
+                        <Trash2 className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Delete</span>
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>

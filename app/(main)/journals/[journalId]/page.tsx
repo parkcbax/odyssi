@@ -46,20 +46,20 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                         Journals
                     </Link>
                 </div>
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div
-                            className="flex h-16 w-16 items-center justify-center rounded-2xl text-3xl shadow-sm border"
+                            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-3xl shadow-sm border"
                             style={{ backgroundColor: (journal as any).color + '20', color: (journal as any).color }} // 20 for opacity
                         >
                             {(journal as any).icon || "📔"}
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">{journal.title}</h1>
-                            <p className="text-muted-foreground">{journal.description || "No description provided."}</p>
+                        <div className="min-w-0">
+                            <h1 className="text-3xl font-bold tracking-tight truncate" title={journal.title}>{journal.title}</h1>
+                            <p className="text-muted-foreground line-clamp-2">{journal.description || "No description provided."}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 sm:ml-auto">
                         <JournalActions journal={{
                             id: journal.id,
                             title: journal.title,
@@ -67,10 +67,11 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                             color: (journal as any).color,
                             icon: (journal as any).icon
                         }} />
-                        <Button asChild>
+                        <Button asChild className="shrink-0">
                             <Link href="/entries/new">
-                                <Plus className="h-4 w-4 mr-2" />
-                                New Entry
+                                <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">New Entry</span>
+                                <span className="sm:hidden">New</span>
                             </Link>
                         </Button>
                     </div>

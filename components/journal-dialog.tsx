@@ -86,7 +86,9 @@ export function JournalDialog({ mode = "create", journal, trigger }: JournalDial
                 {trigger || (
                     <Button size="sm" className="gap-2">
                         {isEdit ? <Settings className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                        {isEdit ? "Edit Journal" : "New Journal"}
+                        <span className={cn(isEdit ? "hidden sm:inline" : "")}>
+                            {isEdit ? "Edit Journal" : "New Journal"}
+                        </span>
                     </Button>
                 )}
             </DialogTrigger>
