@@ -23,7 +23,7 @@ export function TimelineViews({ entries, defaultView = "list" }: TimelineViewsPr
     return (
         <Tabs defaultValue={defaultView} className="w-full">
             <div className="flex justify-center mb-8">
-                <TabsList className="grid w-[400px] grid-cols-2">
+                <TabsList className="grid w-full max-w-[400px] grid-cols-2">
                     <TabsTrigger value="list" className="flex items-center gap-2">
                         <List className="h-4 w-4" />
                         List View

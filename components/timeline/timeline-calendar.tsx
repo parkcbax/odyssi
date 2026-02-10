@@ -51,7 +51,7 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
     }, [entries])
 
     return (
-        <div className="grid gap-6 md:grid-cols-[1fr_300px]">
+        <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_300px]">
             <Card className="p-3">
                 <Calendar
                     mode="single"
