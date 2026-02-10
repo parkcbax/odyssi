@@ -65,7 +65,8 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                             title: journal.title,
                             description: journal.description,
                             color: (journal as any).color,
-                            icon: (journal as any).icon
+                            icon: (journal as any).icon,
+                            isDefault: journal.isDefault
                         }} />
                         <Button asChild className="shrink-0">
                             <Link href="/entries/new">

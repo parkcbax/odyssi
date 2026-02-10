@@ -25,6 +25,7 @@ interface JournalActionsProps {
         description: string | null
         color: string
         icon: string | null
+        isDefault: boolean
     }
 }
 
