@@ -8,7 +8,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { timezones } from "@/lib/timezones"
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { updateProfile, updatePassword } from "@/app/lib/actions"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,9 @@ export function ProfileForm({ user, isAdmin }: ProfileFormProps) {
     const router = useRouter()
     const { update: updateSession } = useSession()
 
+    // State for timezone to ensure we can update session correctly
+    const [timezone, setTimezone] = useState(user.timezone || "UTC")
+
     useEffect(() => {
         if (state?.message === "Success") {
             toast.success("Profile updated successfully")
@@ -50,14 +53,15 @@ export function ProfileForm({ user, isAdmin }: ProfileFormProps) {
 
             updateSession({
                 name: nameInput?.value,
-                email: emailInput?.value
+                email: emailInput?.value,
+                timezone: timezone // Update session with new timezone
             })
 
             router.refresh()
         } else if (state?.message && state.message !== "Success") {
             toast.error(state.message)
         }
-    }, [state, router, updateSession])
+    }, [state, router, updateSession, timezone])
 
     useEffect(() => {
         if (pwdState?.message === "Success") {
@@ -103,7 +107,7 @@ export function ProfileForm({ user, isAdmin }: ProfileFormProps) {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="timezone">Timezone</Label>
-                            <Select name="timezone" defaultValue={user.timezone || "UTC"}>
+                            <Select name="timezone" value={timezone} onValueChange={setTimezone}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select timezone" />
                                 </SelectTrigger>
