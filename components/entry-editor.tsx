@@ -274,7 +274,7 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                     <div className="flex items-center gap-2">
                         <BookIcon className="h-4 w-4 text-muted-foreground" />
                         <Select value={selectedJournalId} onValueChange={setSelectedJournalId}>
-                            <SelectTrigger className="w-[180px] border-none shadow-none font-medium text-muted-foreground hover:text-foreground">
+                            <SelectTrigger className="w-[120px] sm:w-[180px] border-none shadow-none font-medium text-muted-foreground hover:text-foreground">
                                 <SelectValue placeholder="Select Journal" />
                             </SelectTrigger>
                             <SelectContent>
@@ -326,9 +326,9 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
             </div>
 
             {/* Bottom Toolbar */}
-            <div className="border-t bg-background/95 backdrop-blur p-2 sticky bottom-0">
-                <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1 overflow-x-visible">
+            <div className="border-t bg-background/95 backdrop-blur sticky bottom-0 z-10">
+                <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 p-1 sm:p-2">
+                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth">
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleBold().run()} isActive={editor?.isActive('bold')}><Bold className="h-4 w-4" /></ToolbarButton>
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleItalic().run()} isActive={editor?.isActive('italic')}><Italic className="h-4 w-4" /></ToolbarButton>
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleUnderline().run()} isActive={editor?.isActive('underline')}><UnderlineIcon className="h-4 w-4" /></ToolbarButton>

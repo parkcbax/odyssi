@@ -40,7 +40,7 @@ export default async function EntryPage({ params }: { params: Promise<{ entryId:
                     <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
                         <Link href={`/journals/${entry.journalId}`}>
                             <ChevronLeft className="h-4 w-4 mr-1" />
-                            Back to {entry.journal.title}
+                            Back <span className="hidden sm:inline">to {entry.journal.title}</span>
                         </Link>
                     </Button>
                     <div className="flex items-center gap-2">
