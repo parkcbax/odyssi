@@ -1,5 +1,6 @@
 "use client"
 
+import { QRCodeSVG } from 'qrcode.react'
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -142,6 +143,13 @@ export function ShareEntryDialog({
                                     >
                                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                     </Button>
+                                </div>
+
+                                {/* QR Code */}
+                                <div className="flex justify-center pt-2">
+                                    <div className="bg-white p-2 rounded-lg">
+                                        <QRCodeSVG value={publicUrl} size={128} />
+                                    </div>
                                 </div>
                             </div>
 

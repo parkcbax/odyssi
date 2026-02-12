@@ -126,12 +126,6 @@ export default function InsightsPage() {
                         <div className="h-[200px] w-full mt-4">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={data.dayDistribution}>
-                                    <defs>
-                                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
                                     <XAxis
                                         dataKey="day"
                                         stroke="#888888"
@@ -149,6 +143,7 @@ export default function InsightsPage() {
                                     <Tooltip
                                         cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
                                         content={({ active, payload, label }) => {
+                                            // Custom tooltip content
                                             if (active && payload && payload.length) {
                                                 return (
                                                     <div className="rounded-lg border bg-popover p-2 shadow-sm">
@@ -171,11 +166,11 @@ export default function InsightsPage() {
                                     <Area
                                         type="monotone"
                                         dataKey="count"
-                                        stroke="hsl(var(--primary))"
+                                        stroke="var(--chart-1)"
                                         strokeWidth={2}
-                                        fillOpacity={1}
-                                        fill="url(#colorCount)"
-                                        dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--background))" }}
+                                        fillOpacity={0.5}
+                                        fill="var(--chart-1)"
+                                        dot={{ r: 4, fill: "var(--chart-1)", strokeWidth: 2, stroke: "var(--background)" }}
                                         activeDot={{ r: 6, strokeWidth: 0 }}
                                     />
                                 </AreaChart>

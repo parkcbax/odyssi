@@ -26,6 +26,7 @@ import {
     SidebarMenuItem,
     SidebarRail,
     useSidebar,
+    SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -99,21 +100,26 @@ export function AppSidebar({ enableBlogging, isAdmin, enableMultiUser, enableUse
 
     return (
         <Sidebar collapsible="icon">
-            <SidebarHeader className="p-4 border-b">
-                <Link href="/dashboard" className="flex items-center gap-2">
-                    <div className="relative h-8 w-8">
-                        <Image src="/assets/odyssi_logo.png" alt="Odyssi Logo" fill className="object-contain" />
-                    </div>
-                    <span className="text-xl font-bold tracking-tight text-primary">Odyssi</span>
-                </Link>
+            <SidebarHeader className="p-4 border-b group-data-[collapsible=icon]:p-2">
+                <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
+                    <Link href="/dashboard" className="flex items-center gap-2 overflow-hidden">
+                        <div className="relative h-8 w-8 shrink-0">
+                            <Image src="/assets/odyssi_logo.png" alt="Odyssi Logo" fill className="object-contain" />
+                        </div>
+                        <span className="text-xl font-bold tracking-tight text-primary transition-all group-data-[collapsible=icon]:hidden">
+                            Odyssi
+                        </span>
+                    </Link>
+                    <SidebarTrigger className="" />
+                </div>
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
-                    <div className="px-4 py-2">
-                        <Button className="w-full justify-start gap-2" size="lg" asChild>
+                    <div className="px-4 py-2 group-data-[collapsible=icon]:px-0">
+                        <Button className="w-full justify-start gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" size="lg" asChild>
                             <Link href="/entries/new">
                                 <Plus className="h-4 w-4" />
-                                <span>New Entry</span>
+                                <span className="group-data-[collapsible=icon]:hidden">New Entry</span>
                             </Link>
                         </Button>
                     </div>

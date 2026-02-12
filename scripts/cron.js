@@ -1,6 +1,3 @@
-
-const fetch = require('node-fetch'); // Ensure node-fetch is available or use built-in fetch in Node 18+
-
 // Configuration
 const CRON_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 const API_URL = process.env.NEXTAUTH_URL
@@ -14,6 +11,7 @@ console.log(`[Cron] Interval: ${CRON_INTERVAL_MS / 1000 / 60} minutes`);
 async function triggerBackup() {
     try {
         console.log(`[Cron] Triggering backup check at ${new Date().toISOString()}...`);
+        // Node 18+ has global fetch
         const res = await fetch(API_URL);
 
         if (res.ok) {

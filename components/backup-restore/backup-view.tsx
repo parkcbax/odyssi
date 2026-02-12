@@ -78,10 +78,8 @@ export function BackupView({ journals, initialAutoBackup, initialInterval, lastA
                 setEnableAutoBackup(config.enableAutoBackup)
                 setAutoBackupInterval(config.autoBackupInterval)
 
-                // Trigger lazy check if enabled
-                if (config.enableAutoBackup) {
-                    fetch("/api/cron/backup").catch(e => console.error("Lazy backup check failed", e))
-                }
+                // We do NOT trigger backup check here anymore. 
+                // It should be handled by the cron job only.
             }
         })
     }, [])
