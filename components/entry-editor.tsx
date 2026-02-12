@@ -4,7 +4,8 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { CustomImage } from '@/components/tiptap/image-extension'
-import LocationPicker from '@/components/location-picker'
+import dynamic from 'next/dynamic'
+const LocationPicker = dynamic(() => import('@/components/location-picker'), { ssr: false })
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import LinkExtension from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
@@ -15,6 +16,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { CodeBlockComponent } from './tiptap/code-block-component'
 import { LocationExtension } from '@/components/tiptap/location-extension'
+import { CustomHTML } from '@/components/tiptap/html-extension'
 import { all, createLowlight } from 'lowlight'
 const lowlight = createLowlight(all)
 
@@ -59,7 +61,8 @@ import {
     SquareCode,
     Braces,
     X,
-    Map
+    Map,
+    HelpCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -140,6 +143,7 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                 },
             }),
             LocationExtension,
+            CustomHTML,
         ],
         content: initialData?.content || '',
         editorProps: {
@@ -340,6 +344,12 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleTaskList().run()} isActive={editor?.isActive('taskList')}><ListTodo className="h-4 w-4" /></ToolbarButton>
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleBlockquote().run()} isActive={editor?.isActive('blockquote')}><Quote className="h-4 w-4" /></ToolbarButton>
                         <ToolbarButton onClick={() => editor?.chain().focus().toggleCodeBlock().run()} isActive={editor?.isActive('codeBlock')} title="Code Block"><Braces className="h-4 w-4" /></ToolbarButton>
+                        <ToolbarButton
+                            onClick={() => editor?.chain().focus().insertContent({ type: 'customHTML', attrs: { content: '' } }).run()}
+                            title="Insert Custom HTML"
+                        >
+                            <SquareCode className="h-4 w-4" />
+                        </ToolbarButton>
                         <div className="w-px h-6 bg-border mx-1" />
 
                         {/* Media & Link Tools */}

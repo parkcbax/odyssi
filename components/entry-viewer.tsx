@@ -12,6 +12,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { CodeBlockComponent } from '@/components/tiptap/code-block-component'
 import { LocationExtension } from '@/components/tiptap/location-extension'
+
 import { all, createLowlight } from 'lowlight'
 const lowlight = createLowlight(all)
 import { useEffect, useState } from 'react'

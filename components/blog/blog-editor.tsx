@@ -12,6 +12,7 @@ import CharacterCount from '@tiptap/extension-character-count'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { CodeBlockComponent } from '../tiptap/code-block-component'
+
 import { all, createLowlight } from 'lowlight'
 const lowlight = createLowlight(all)
 import { CustomHTML } from '@/components/tiptap/html-extension'
@@ -34,7 +35,8 @@ import {
     Save,
     Code,
     SquareCode,
-    Braces
+    Braces,
+
 } from 'lucide-react'
 
 const LANGUAGES = [
@@ -122,6 +124,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                 },
             }),
             CustomHTML,
+
         ],
         content: initialData?.content || '',
         editorProps: {
@@ -237,6 +240,8 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleTaskList().run()} isActive={editor?.isActive('taskList')}><ListTodo className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleBlockquote().run()} isActive={editor?.isActive('blockquote')}><Quote className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleCodeBlock().run()} isActive={editor?.isActive('codeBlock')} title="Code Block"><Braces className="h-4 w-4" /></ToolbarButton>
+                    <ToolbarButton onClick={() => editor?.chain().focus().toggleCodeBlock().run()} isActive={editor?.isActive('codeBlock')} title="Code Block"><Braces className="h-4 w-4" /></ToolbarButton>
+
                     <div className="w-px h-6 bg-border mx-1" />
 
                     <ToolbarButton
