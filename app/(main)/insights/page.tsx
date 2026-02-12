@@ -12,7 +12,8 @@ export default function InsightsPage() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        getInsightsData().then(d => {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+        getInsightsData(timezone).then(d => {
             setData(d)
             setLoading(false)
         })

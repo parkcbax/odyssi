@@ -3,6 +3,7 @@
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { startOfDay, subDays, isSameDay, format, getDay } from "date-fns"
+import { toZonedTime } from "date-fns-tz"
 import { getContentSnippet } from "@/lib/editor-utils"
 
 export type InsightData = {
@@ -16,11 +17,11 @@ export type InsightData = {
     locationDistribution: { location: string; count: number }[]
 }
 
-export async function getInsightsData(): Promise<InsightData | null> {
+export async function getInsightsData(timezone: string = "UTC"): Promise<InsightData | null> {
     const session = await auth()
     if (!session?.user?.id) return null
 
-    // Get User Journals first (safer for Prisma Adapter bugs?)
+    // Get User Journals first
     const journals = await prisma.journal.findMany({
         where: { userId: session.user.id },
         select: { id: true }
@@ -47,28 +48,33 @@ export async function getInsightsData(): Promise<InsightData | null> {
         }
     })
 
-    console.log(`[Insights] User: ${session.user.id}, Journals: ${journalIds.length}, Entries: ${entries.length}`)
+    console.log(`[Insights] User: ${session.user.id}, Journals: ${journalIds.length}, Entries: ${entries.length}, Timezone: ${timezone}`)
+
+    // Helper to format a date in the user's timezone
+    const formatInZone = (date: Date | string | number, fmt: string) => {
+        return format(toZonedTime(date, timezone), fmt)
+    }
 
     // 1. Total Entries
     const totalEntries = entries.length
 
     // 2. Streaks
-    // Normalize dates to start of day strings for comparison
-    const uniqueDates = Array.from(new Set(entries.map(e => format(startOfDay(e.date), 'yyyy-MM-dd')))).sort().reverse()
+    // Normalize dates to start of day strings for comparison, using Client Timezone
+    const uniqueDates = Array.from(new Set(entries.map(e => formatInZone(e.date, 'yyyy-MM-dd')))).sort().reverse()
 
     let currentStreak = 0
     let longestStreak = 0
 
     if (uniqueDates.length > 0) {
-        const today = format(startOfDay(new Date()), 'yyyy-MM-dd')
-        const yesterday = format(subDays(startOfDay(new Date()), 1), 'yyyy-MM-dd')
+        const now = new Date()
+        const today = formatInZone(now, 'yyyy-MM-dd')
+        const yesterday = formatInZone(subDays(toZonedTime(now, timezone), 1), 'yyyy-MM-dd')
 
         // Check if streak is active (has entry today or yesterday)
         const lastEntryDate = uniqueDates[0]
         if (lastEntryDate === today || lastEntryDate === yesterday) {
             currentStreak = 1
-            // Count backwards from the most recent date
-            let checkDate = new Date(lastEntryDate)
+            let checkDate = toZonedTime(lastEntryDate, timezone)
 
             for (let i = 1; i < uniqueDates.length; i++) {
                 const prevDate = format(subDays(checkDate, 1), 'yyyy-MM-dd')
@@ -84,8 +90,11 @@ export async function getInsightsData(): Promise<InsightData | null> {
         // Calculate longest streak
         let tempStreak = 1
         for (let i = 0; i < uniqueDates.length - 1; i++) {
-            const currentDate = new Date(uniqueDates[i])
+            const currentDateStr = uniqueDates[i]
             const nextDateInList = uniqueDates[i + 1]
+
+            // Reconstruct date object from string to safely subtract day
+            const currentDate = new Date(currentDateStr)
             const expectedPrevDate = format(subDays(currentDate, 1), 'yyyy-MM-dd')
 
             if (nextDateInList === expectedPrevDate) {
@@ -102,7 +111,6 @@ export async function getInsightsData(): Promise<InsightData | null> {
     let totalWords = 0
     entries.forEach(entry => {
         const text = getContentSnippet(entry.content)
-        // Simple approximate word count
         const count = text.trim().split(/\s+/).filter(w => w.length > 0).length
         totalWords += count
     })
@@ -122,8 +130,10 @@ export async function getInsightsData(): Promise<InsightData | null> {
     const dayMap = new Map<string, number>()
     const last7Days: { date: string, label: string }[] = []
 
+    const nowZoned = toZonedTime(new Date(), timezone)
+
     for (let i = 6; i >= 0; i--) {
-        const d = subDays(new Date(), i)
+        const d = subDays(nowZoned, i)
         const dateKey = format(d, 'yyyy-MM-dd')
         const label = format(d, 'EEE') // Mon, Tue, etc.
         last7Days.push({ date: dateKey, label })
@@ -131,7 +141,8 @@ export async function getInsightsData(): Promise<InsightData | null> {
     }
 
     entries.forEach(entry => {
-        const dateKey = format(startOfDay(entry.date), 'yyyy-MM-dd')
+        // Group by the User's Timezone Date
+        const dateKey = formatInZone(entry.date, 'yyyy-MM-dd')
         if (dayMap.has(dateKey)) {
             const text = getContentSnippet(entry.content)
             const count = text.trim().split(/\s+/).filter(w => w.length > 0).length
