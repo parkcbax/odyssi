@@ -129,43 +129,68 @@ export async function POST(req: NextRequest) {
 
                     // 2. Restore Users First
                     for (const user of data.users) {
-                        // Check if user exists by email (primary key for auth)
-                        const existing = await tx.user.findUnique({ where: { email: user.email } })
+                        // 1. Check if user exists by Email (Primary Match)
+                        const existingByEmail = await tx.user.findUnique({ where: { email: user.email } })
 
                         let targetId = user.id
 
-                        // If user exists, we MUST re-use their existing ID to avoid collisions
-                        if (existing) {
-                            targetId = existing.id
-                        }
+                        if (existingByEmail) {
+                            // CASE A: User exists by Email. matches backup.
+                            // We MUST use their existing ID.
+                            targetId = existingByEmail.id
 
-                        await tx.user.upsert({
-                            where: { email: user.email },
-                            update: {
-                                name: user.name,
-                                image: user.image,
-                                // Overwrite sensitive fields to ensure exact mirror of backup
-                                passwordHash: user.passwordHash,
-                                emailVerified: user.emailVerified,
-                                timezone: user.timezone,
-                                // Restore timestamps if available
-                                updatedAt: user.updatedAt ? new Date(user.updatedAt) : undefined
-                            },
-                            create: {
-                                // If creating new, try to use backup ID. 
-                                // If that ID matches an existing user with DIFFERENT email (unlikely but possible), Prisma would throw.
-                                // But `user.id` is usually a CUID.
-                                id: user.id,
-                                name: user.name,
-                                email: user.email,
-                                passwordHash: user.passwordHash,
-                                timezone: user.timezone || "UTC",
-                                image: user.image,
-                                emailVerified: user.emailVerified,
-                                createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
-                                updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date()
+                            await tx.user.update({
+                                where: { id: targetId },
+                                data: {
+                                    name: user.name,
+                                    image: user.image,
+                                    passwordHash: user.passwordHash,
+                                    emailVerified: user.emailVerified,
+                                    timezone: user.timezone,
+                                    updatedAt: user.updatedAt ? new Date(user.updatedAt) : undefined
+                                }
+                            })
+                        } else {
+                            // User not found by email. 
+                            // Check if their ID is taken by someone else?
+                            const existingById = await tx.user.findUnique({ where: { id: user.id } })
+
+                            if (existingById) {
+                                // CASE B: ID exists, but Email specific to that ID is different (otherwise we would have matched by email above).
+                                // We are restoring a user who has the SAME ID as someone in DB, but different email.
+                                // We should overwrite this user to match our backup.
+                                // Effectively, this changes the email of the user with this ID to the backup's email.
+                                targetId = existingById.id
+
+                                await tx.user.update({
+                                    where: { id: targetId },
+                                    data: {
+                                        email: user.email, // CHANGE EMAIL
+                                        name: user.name,
+                                        image: user.image,
+                                        passwordHash: user.passwordHash,
+                                        emailVerified: user.emailVerified,
+                                        timezone: user.timezone,
+                                        updatedAt: user.updatedAt ? new Date(user.updatedAt) : undefined
+                                    }
+                                })
+                            } else {
+                                // CASE C: Neither Email nor ID exists. Clean create.
+                                await tx.user.create({
+                                    data: {
+                                        id: user.id,
+                                        name: user.name,
+                                        email: user.email,
+                                        passwordHash: user.passwordHash,
+                                        timezone: user.timezone || "UTC",
+                                        image: user.image,
+                                        emailVerified: user.emailVerified,
+                                        createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+                                        updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date()
+                                    }
+                                })
                             }
-                        })
+                        }
 
                         // Map old ID to valid target ID
                         userIdMap.set(user.id, targetId)
