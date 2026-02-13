@@ -54,28 +54,17 @@ export function EntryActions({
     }
 
     const handleSavePDF = () => {
-        // We defer to the browser's native print dialog which produces better PDFs (vectors)
-        // and doesn't crash on large content.
-        // The CSS @media print rule in globals.css handles hiding the UI.
-
-        const element = document.getElementById('entry-printable-content')
-        if (!element) return
-
-        // Create a dedicated print wrapper to isolate content
-        // This wrapper is styled in globals.css to be the only visible element during print
-        const clone = element.cloneNode(true) as HTMLElement
-        const wrapper = document.createElement('div')
-        wrapper.id = 'entry-printable-content-wrapper'
-        wrapper.appendChild(clone)
-        document.body.appendChild(wrapper)
+        // Store original title
+        const originalTitle = document.title
+        // Set title to empty string to hide it from the browser's print header
+        document.title = " "
 
         // Trigger print
         window.print()
 
-        // Clean up after a short delay to allow print rendering to initialize
-        // (Note: window.print() is blocking in many browsers, but not all)
+        // Restore original title (after a small delay to ensure print dialog picks it up)
         setTimeout(() => {
-            document.body.removeChild(wrapper)
+            document.title = originalTitle
         }, 500)
     }
 

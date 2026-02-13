@@ -323,61 +323,68 @@
 
 
 @media print {
-
-  /* Explicitly hide the entire original app structure */
-  body>*:not(#entry-printable-content-wrapper) {
-    display: none !important;
+  @page {
+    margin: 15mm;
   }
 
-  /* Redundant hiding for safety */
+  /* 
+     Native Print Approach: 
+     Hide everything mostly, but ensure our specific content is visible.
+     Using display:none on parents breaks visibility of children, so we use the
+     visibility:hidden tactic on body, and visibility:visible on the content.
+  */
+
+  body {
+    visibility: hidden;
+    background-color: white !important;
+  }
+
+  /* Hide specific UI elements that might float or persist */
   nav,
   aside,
   header,
   footer,
   button,
   .sidebar,
-  div[data-radix-popper-content-wrapper],
-  [role="dialog"] {
+  [role="dialog"],
+  .fixed,
+  .sticky {
     display: none !important;
   }
 
-  /* Ensure the wrapper is the ONLY thing visible */
-  #entry-printable-content-wrapper {
-    display: block !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    z-index: 9999 !important;
-    background-color: white !important;
-  }
-
-  /* Style the content inside the wrapper */
+  /* Isolate the content */
   #entry-printable-content {
-    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 20mm !important;
+    padding: 0 !important;
     background-color: white !important;
     color: black !important;
-    box-shadow: none !important;
-    border: none !important;
+    z-index: 9999;
   }
 
-  /* Hide any buttons that might have been cloned */
-  #entry-printable-content button,
-  #entry-printable-content .btn,
-  #entry-printable-content [role="button"] {
-    display: none !important;
-  }
-
-  /* Ensure text is black and background white */
+  /* Make sure all children of the content are visible */
   #entry-printable-content * {
+    visibility: visible !important;
     color: black !important;
-    background-color: transparent !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  }
+
+  /* Fix Leaflet marker icon size in print */
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow {
+    max-width: none !important;
+    max-height: none !important;
+    /* Ensure no weird transforms hide it */
+    transform-origin: center bottom !important;
+  }
+
+  /* Ensure map tiles print clearly */
+  .leaflet-tile {
+    /* Sometimes browsers try to be smart with images in print */
+    image-rendering: pixelated;
   }
 }
 
