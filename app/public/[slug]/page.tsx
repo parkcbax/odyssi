@@ -34,7 +34,13 @@ export default async function PublicEntryPage({ params }: { params: Promise<{ sl
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            {new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                            {new Date(entry.date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                timeZone: entry.journal.user.timezone
+                            })}
                         </div>
                         {entry.locationName && (
                             <div className="flex items-center gap-1">
