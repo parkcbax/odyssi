@@ -407,15 +407,9 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                                         </TabsContent>
 
                                         <TabsContent value="manual" className="mt-4 space-y-4">
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div className="space-y-1">
-                                                    <label className="text-xs text-muted-foreground">Latitude</label>
-                                                    <Input id="insert-lat" type="number" step="any" placeholder="e.g. 48.8584" />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-xs text-muted-foreground">Longitude</label>
-                                                    <Input id="insert-lng" type="number" step="any" placeholder="e.g. 2.2945" />
-                                                </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs text-muted-foreground">Coordinates (Lat, Lng)</label>
+                                                <Input id="insert-coords" placeholder='e.g. 14.081, 99.434' />
                                             </div>
                                             <div className="space-y-1">
                                                 <label className="text-xs text-muted-foreground">Location Name (Optional)</label>
@@ -424,17 +418,22 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                                             <Button
                                                 className="w-full"
                                                 onClick={() => {
-                                                    const latVal = (document.getElementById('insert-lat') as HTMLInputElement)?.value;
-                                                    const lngVal = (document.getElementById('insert-lng') as HTMLInputElement)?.value;
+                                                    const coordsVal = (document.getElementById('insert-coords') as HTMLInputElement)?.value;
                                                     const labelVal = (document.getElementById('insert-label') as HTMLInputElement)?.value;
 
-                                                    if (!latVal || !lngVal) {
-                                                        alert('Please enter both latitude and longitude');
+                                                    if (!coordsVal) {
+                                                        alert('Please enter coordinates');
                                                         return;
                                                     }
 
-                                                    const lat = parseFloat(latVal);
-                                                    const lng = parseFloat(lngVal);
+                                                    const parts = coordsVal.split(',').map(p => p.trim());
+                                                    if (parts.length !== 2) {
+                                                        alert('Please enter coordinates in "Lat, Lng" format');
+                                                        return;
+                                                    }
+
+                                                    const lat = parseFloat(parts[0]);
+                                                    const lng = parseFloat(parts[1]);
 
                                                     if (isNaN(lat) || isNaN(lng)) {
                                                         alert('Invalid coordinates');
@@ -535,9 +534,10 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                                     </div>
 
                                     <Tabs defaultValue="text" className="w-full">
-                                        <TabsList className="grid w-full grid-cols-2">
+                                        <TabsList className="grid w-full grid-cols-3">
                                             <TabsTrigger value="text">Manual Text</TabsTrigger>
-                                            <TabsTrigger value="map">Map / GPS</TabsTrigger>
+                                            <TabsTrigger value="map">Map Picker</TabsTrigger>
+                                            <TabsTrigger value="gps">Manual GPS</TabsTrigger>
                                         </TabsList>
 
                                         <TabsContent value="text" className="space-y-2 mt-4">
@@ -578,6 +578,56 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                                                 <div className="text-xs text-muted-foreground">
                                                     Saved: {locationLat ? `${locationLat.toFixed(4)}, ${locationLng?.toFixed(4)}` : "No coordinates set"}
                                                 </div>
+                                            </div>
+                                        </TabsContent>
+
+                                        <TabsContent value="gps" className="mt-4 space-y-4">
+                                            <div className="space-y-1">
+                                                <label className="text-xs text-muted-foreground">Coordinates (Lat, Lng)</label>
+                                                <Input
+                                                    id="entry-coords"
+                                                    placeholder="e.g. 14.081, 99.434"
+                                                    defaultValue={locationLat && locationLng ? `${locationLat}, ${locationLng}` : ''}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs text-muted-foreground">Location Name (Optional)</label>
+                                                <Input id="entry-coords-label" placeholder="e.g. Eiffel Tower" defaultValue={locationName} />
+                                            </div>
+                                            <Button
+                                                className="w-full"
+                                                onClick={() => {
+                                                    const coordsVal = (document.getElementById('entry-coords') as HTMLInputElement)?.value;
+                                                    const labelVal = (document.getElementById('entry-coords-label') as HTMLInputElement)?.value;
+
+                                                    if (!coordsVal) {
+                                                        alert('Please enter coordinates');
+                                                        return;
+                                                    }
+
+                                                    const parts = coordsVal.split(',').map(p => p.trim());
+                                                    if (parts.length !== 2) {
+                                                        alert('Please enter coordinates in "Lat, Lng" format');
+                                                        return;
+                                                    }
+
+                                                    const lat = parseFloat(parts[0]);
+                                                    const lng = parseFloat(parts[1]);
+
+                                                    if (isNaN(lat) || isNaN(lng)) {
+                                                        alert('Invalid coordinates');
+                                                        return;
+                                                    }
+
+                                                    setLocationLat(lat);
+                                                    setLocationLng(lng);
+                                                    setLocationName(labelVal || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                                                }}
+                                            >
+                                                Apply Coordinates
+                                            </Button>
+                                            <div className="text-xs text-muted-foreground">
+                                                Saved: {locationLat ? `${locationLat.toFixed(4)}, ${locationLng?.toFixed(4)}` : "No coordinates set"}
                                             </div>
                                         </TabsContent>
                                     </Tabs>
