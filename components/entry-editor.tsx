@@ -383,22 +383,74 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                             <PopoverContent className="w-96 p-4" align="start">
                                 <div className="space-y-4">
                                     <h4 className="font-medium leading-none">Insert Location Block</h4>
-                                    <div className="h-[300px] w-full border rounded-md overflow-hidden relative">
-                                        <LocationPicker
-                                            lat={null}
-                                            lng={null}
-                                            onLocationSelect={(lat, lng) => {
-                                                // Ask for label or default
-                                                const label = prompt("Location Name (optional):", `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
-                                                editor?.chain().focus().insertContent({
-                                                    type: 'locationMap',
-                                                    attrs: { lat, lng, label: label || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }
-                                                }).run()
-                                                // Close popover logic would be ideal but for now this works as it inserts and user clicks away
-                                            }}
-                                        />
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">Click on the map to insert this location into your entry.</p>
+                                    <Tabs defaultValue="map" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-2">
+                                            <TabsTrigger value="map">Map Picker</TabsTrigger>
+                                            <TabsTrigger value="manual">Manual Input</TabsTrigger>
+                                        </TabsList>
+
+                                        <TabsContent value="map" className="mt-4 space-y-4">
+                                            <div className="h-[300px] w-full border rounded-md overflow-hidden relative">
+                                                <LocationPicker
+                                                    lat={null}
+                                                    lng={null}
+                                                    onLocationSelect={(lat, lng) => {
+                                                        const label = prompt("Location Name (optional):", `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                                                        editor?.chain().focus().insertContent({
+                                                            type: 'locationMap',
+                                                            attrs: { lat, lng, label: label || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }
+                                                        }).run()
+                                                    }}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">Click on the map to insert this location into your entry.</p>
+                                        </TabsContent>
+
+                                        <TabsContent value="manual" className="mt-4 space-y-4">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="space-y-1">
+                                                    <label className="text-xs text-muted-foreground">Latitude</label>
+                                                    <Input id="insert-lat" type="number" step="any" placeholder="e.g. 48.8584" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs text-muted-foreground">Longitude</label>
+                                                    <Input id="insert-lng" type="number" step="any" placeholder="e.g. 2.2945" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs text-muted-foreground">Location Name (Optional)</label>
+                                                <Input id="insert-label" placeholder="e.g. Eiffel Tower" />
+                                            </div>
+                                            <Button
+                                                className="w-full"
+                                                onClick={() => {
+                                                    const latVal = (document.getElementById('insert-lat') as HTMLInputElement)?.value;
+                                                    const lngVal = (document.getElementById('insert-lng') as HTMLInputElement)?.value;
+                                                    const labelVal = (document.getElementById('insert-label') as HTMLInputElement)?.value;
+
+                                                    if (!latVal || !lngVal) {
+                                                        alert('Please enter both latitude and longitude');
+                                                        return;
+                                                    }
+
+                                                    const lat = parseFloat(latVal);
+                                                    const lng = parseFloat(lngVal);
+
+                                                    if (isNaN(lat) || isNaN(lng)) {
+                                                        alert('Invalid coordinates');
+                                                        return;
+                                                    }
+
+                                                    editor?.chain().focus().insertContent({
+                                                        type: 'locationMap',
+                                                        attrs: { lat, lng, label: labelVal || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }
+                                                    }).run();
+                                                }}
+                                            >
+                                                Insert Location
+                                            </Button>
+                                        </TabsContent>
+                                    </Tabs>
                                 </div>
                             </PopoverContent>
                         </Popover>
