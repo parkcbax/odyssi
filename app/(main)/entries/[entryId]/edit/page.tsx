@@ -36,6 +36,8 @@ export default async function EditEntryPage({ params }: { params: Promise<{ entr
                     date: entry.date,
                     mood: entry.mood || undefined,
                     locationName: entry.locationName || undefined,
+                    locationLat: entry.locationLat,
+                    locationLng: entry.locationLng,
                     tags: entry.tags.map(t => t.name)
                 }}
             />
