@@ -39,6 +39,7 @@ const LANGUAGES = [
 
 const MOODS = ["😊", "😢", "😡", "😴", "🤔", "🎉", "🔥", "❤️", "✨", "🌧️"]
 import { useState, useEffect, forwardRef } from 'react'
+import { parseLocationInput } from '@/lib/location-utils'
 import { Button } from '@/components/ui/button'
 import {
     Bold,
@@ -408,8 +409,8 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
 
                                         <TabsContent value="manual" className="mt-4 space-y-4">
                                             <div className="space-y-1">
-                                                <label className="text-xs text-muted-foreground">Coordinates (Lat, Lng)</label>
-                                                <Input id="insert-coords" placeholder='e.g. 14.081, 99.434' />
+                                                <label className="text-xs text-muted-foreground">Coordinates or Plus Code</label>
+                                                <Input id="insert-coords" placeholder='e.g. 14.081, 99.434 or 8FVH43W4+X7' />
                                             </div>
                                             <div className="space-y-1">
                                                 <label className="text-xs text-muted-foreground">Location Name (Optional)</label>
@@ -417,28 +418,23 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                                             </div>
                                             <Button
                                                 className="w-full"
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     const coordsVal = (document.getElementById('insert-coords') as HTMLInputElement)?.value;
                                                     const labelVal = (document.getElementById('insert-label') as HTMLInputElement)?.value;
 
                                                     if (!coordsVal) {
-                                                        alert('Please enter coordinates');
+                                                        alert('Please enter coordinates or a Plus Code');
                                                         return;
                                                     }
 
-                                                    const parts = coordsVal.split(',').map(p => p.trim());
-                                                    if (parts.length !== 2) {
-                                                        alert('Please enter coordinates in "Lat, Lng" format');
+                                                    const parsed = await parseLocationInput(coordsVal);
+
+                                                    if (!parsed) {
+                                                        alert('Invalid coordinates or Plus Code');
                                                         return;
                                                     }
 
-                                                    const lat = parseFloat(parts[0]);
-                                                    const lng = parseFloat(parts[1]);
-
-                                                    if (isNaN(lat) || isNaN(lng)) {
-                                                        alert('Invalid coordinates');
-                                                        return;
-                                                    }
+                                                    const { lat, lng } = parsed;
 
                                                     editor?.chain().focus().insertContent({
                                                         type: 'locationMap',
@@ -583,10 +579,10 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
 
                                         <TabsContent value="gps" className="mt-4 space-y-4">
                                             <div className="space-y-1">
-                                                <label className="text-xs text-muted-foreground">Coordinates (Lat, Lng)</label>
+                                                <label className="text-xs text-muted-foreground">Coordinates or Plus Code</label>
                                                 <Input
                                                     id="entry-coords"
-                                                    placeholder="e.g. 14.081, 99.434"
+                                                    placeholder="e.g. 14.081, 99.434 or 8FVH43W4+X7"
                                                     defaultValue={locationLat && locationLng ? `${locationLat}, ${locationLng}` : ''}
                                                 />
                                             </div>
@@ -596,28 +592,23 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                                             </div>
                                             <Button
                                                 className="w-full"
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     const coordsVal = (document.getElementById('entry-coords') as HTMLInputElement)?.value;
                                                     const labelVal = (document.getElementById('entry-coords-label') as HTMLInputElement)?.value;
 
                                                     if (!coordsVal) {
-                                                        alert('Please enter coordinates');
+                                                        alert('Please enter coordinates or a Plus Code');
                                                         return;
                                                     }
 
-                                                    const parts = coordsVal.split(',').map(p => p.trim());
-                                                    if (parts.length !== 2) {
-                                                        alert('Please enter coordinates in "Lat, Lng" format');
+                                                    const parsed = await parseLocationInput(coordsVal);
+
+                                                    if (!parsed) {
+                                                        alert('Invalid coordinates or Plus Code');
                                                         return;
                                                     }
 
-                                                    const lat = parseFloat(parts[0]);
-                                                    const lng = parseFloat(parts[1]);
-
-                                                    if (isNaN(lat) || isNaN(lng)) {
-                                                        alert('Invalid coordinates');
-                                                        return;
-                                                    }
+                                                    const { lat, lng } = parsed;
 
                                                     setLocationLat(lat);
                                                     setLocationLng(lng);

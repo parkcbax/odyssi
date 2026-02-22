@@ -16,10 +16,18 @@ import { CodeBlockComponent } from '../tiptap/code-block-component'
 import { all, createLowlight } from 'lowlight'
 const lowlight = createLowlight(all)
 import { CustomHTML } from '@/components/tiptap/html-extension'
+import { LocationExtension } from '@/components/tiptap/location-extension'
 import { useState, useEffect, forwardRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Input } from "@/components/ui/input"
+import { parseLocationInput } from '@/lib/location-utils'
+import dynamic from 'next/dynamic'
+
+const LocationPicker = dynamic(() => import('@/components/location-picker'), { ssr: false })
 import {
     Bold,
     Italic,
@@ -36,6 +44,7 @@ import {
     Code,
     SquareCode,
     Braces,
+    Map
 
 } from 'lucide-react'
 
@@ -123,6 +132,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                     return ReactNodeViewRenderer(CodeBlockComponent)
                 },
             }),
+            LocationExtension,
             CustomHTML,
 
         ],
@@ -264,6 +274,82 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                     >
                         <LinkIcon className="h-4 w-4" />
                     </ToolbarButton>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <ToolbarButton title="Insert Map Block">
+                                <Map className="h-4 w-4" />
+                            </ToolbarButton>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-96 p-4" align="start">
+                            <div className="space-y-4">
+                                <h4 className="font-medium leading-none">Insert Location Block</h4>
+                                <Tabs defaultValue="map" className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2">
+                                        <TabsTrigger value="map">Map Picker</TabsTrigger>
+                                        <TabsTrigger value="manual">Manual Input</TabsTrigger>
+                                    </TabsList>
+
+                                    <TabsContent value="map" className="mt-4 space-y-4">
+                                        <div className="h-[300px] w-full border rounded-md overflow-hidden relative">
+                                            <LocationPicker
+                                                lat={null}
+                                                lng={null}
+                                                onLocationSelect={(lat, lng) => {
+                                                    const label = prompt("Location Name (optional):", `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                                                    if (label !== null) {
+                                                        editor?.chain().focus().insertContent({
+                                                            type: 'locationMap',
+                                                            attrs: { lat, lng, label: label || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }
+                                                        }).run()
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Click on the map to insert this location into your post.</p>
+                                    </TabsContent>
+
+                                    <TabsContent value="manual" className="mt-4 space-y-4">
+                                        <div className="space-y-1">
+                                            <label className="text-xs text-muted-foreground">Coordinates or Plus Code</label>
+                                            <Input id="insert-coords-blog" placeholder='e.g. 14.081, 99.434 or 8FVH43W4+X7' />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs text-muted-foreground">Location Name (Optional)</label>
+                                            <Input id="insert-label-blog" placeholder="e.g. Eiffel Tower" />
+                                        </div>
+                                        <Button
+                                            className="w-full"
+                                            onClick={async () => {
+                                                const coordsVal = (document.getElementById('insert-coords-blog') as HTMLInputElement)?.value;
+                                                const labelVal = (document.getElementById('insert-label-blog') as HTMLInputElement)?.value;
+
+                                                if (!coordsVal) {
+                                                    alert('Please enter coordinates or a Plus Code');
+                                                    return;
+                                                }
+
+                                                const parsed = await parseLocationInput(coordsVal);
+
+                                                if (!parsed) {
+                                                    alert('Invalid coordinates or Plus Code');
+                                                    return;
+                                                }
+
+                                                const { lat, lng } = parsed;
+
+                                                editor?.chain().focus().insertContent({
+                                                    type: 'locationMap',
+                                                    attrs: { lat, lng, label: labelVal || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }
+                                                }).run();
+                                            }}
+                                        >
+                                            Insert Location
+                                        </Button>
+                                    </TabsContent>
+                                </Tabs>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                     <ToolbarButton
                         onClick={() => editor?.chain().focus().insertContent({ type: 'customHTML', attrs: { content: '' } }).run()}
                         title="Insert Custom HTML"
