@@ -9,7 +9,7 @@ export default function LoginPage() {
             <div className="flex w-full max-w-sm flex-col gap-6">
                 <a href="#" className="flex items-center gap-2 self-center font-medium">
                     <div className="relative h-8 w-8">
-                        <Image src="/assets/odyssi_logo.png" alt="Odyssi Logo" fill className="object-contain" />
+                        <Image src="/assets/odyssi_logo.png" alt="Odyssi Logo" fill className="object-contain" unoptimized />
                     </div>
                     Odyssi
                 </a>

@@ -104,7 +104,7 @@ export function AppSidebar({ enableBlogging, isAdmin, enableMultiUser, enableUse
                 <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
                     <Link href="/dashboard" className="flex items-center gap-2 overflow-hidden">
                         <div className="relative h-8 w-8 shrink-0">
-                            <Image src="/assets/odyssi_logo.png" alt="Odyssi Logo" fill className="object-contain" />
+                            <Image src="/assets/odyssi_logo.png" alt="Odyssi Logo" fill className="object-contain" unoptimized />
                         </div>
                         <span className="text-xl font-bold tracking-tight text-primary transition-all group-data-[collapsible=icon]:hidden">
                             Odyssi
