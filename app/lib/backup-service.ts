@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma"
 import AdmZip from "adm-zip"
-import { writeFile, mkdir, readFile } from "fs/promises"
+import { writeFile, mkdir, readFile, stat, unlink } from "fs/promises"
 import { join } from "path"
+import { createWriteStream } from "fs"
 
 export type BackupOptions = {
     type: "EVERYTHING" | "JOURNAL"
-    userId?: string // If provided, filters by user. If null, might imply system-wide (future)
+    userId?: string
     journalId?: string
     multipart?: boolean
     splitSize?: "250MB" | "500MB"
@@ -19,116 +20,163 @@ export async function generateBackup(options: BackupOptions) {
         throw new Error("UserId required for Journal backup")
     }
 
-    // 1. Fetch Data
-    let dataToBackup: any = {
-        version: 1,
-        timestamp: new Date().toISOString(),
-        type,
-        source,
-        user: userId ? { id: userId } : undefined
+    const backupDir = join(process.cwd(), "backups")
+    await mkdir(backupDir, { recursive: true })
+
+    const timestamp = new Date().toISOString()
+    const safeTimestamp = timestamp.replace(/[:.]/g, "-")
+
+    const prefix = source === "AUTO" ? "auto-backup" : "backup"
+    let baseFilename = `${prefix}-${type}-${safeTimestamp}.zip`
+
+    const tempJsonPath = join(backupDir, `temp_data_${safeTimestamp}.json`)
+
+    const writer = createWriteStream(tempJsonPath)
+
+    // Write helper
+    const writeStream = (data: string): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            if (!writer.write(data)) {
+                writer.once('drain', resolve)
+            } else {
+                resolve()
+            }
+        })
     }
 
-    let entries = []
+    const imagesToAdd = new Set<string>()
+    const extractImages = (node: any) => {
+        if (node.type === 'image' && node.attrs && node.attrs.src) {
+            imagesToAdd.add(node.attrs.src)
+        }
+        if (node.content && Array.isArray(node.content)) {
+            node.content.forEach(extractImages)
+        }
+    }
 
-    // Logic similar to original route
+    // 1. Start JSON Streaming
+    await writeStream(`{"version":1,"timestamp":"${timestamp}","type":"${type}","source":"${source}"`)
+    if (userId) await writeStream(`,"user":{"id":"${userId}"}`)
+
+    // JOURNALS
+    await writeStream(`,"journals":[`)
+
+    let journalsToProcess: any[] = []
     if (type === "JOURNAL") {
         if (!journalId) throw new Error("Journal ID required")
-        const journal = await prisma.journal.findUnique({
-            where: { id: journalId, userId: userId }, // enforcing user check if provided
-            include: { entries: { include: { tags: true, images: true } } }
-        })
-        if (!journal) throw new Error("Journal not found")
+        const j = await prisma.journal.findUnique({ where: { id: journalId, userId: userId } })
+        if (!j) throw new Error("Journal not found")
+        journalsToProcess = [j]
 
-        dataToBackup.journals = [journal]
-        entries = journal.entries || []
+        const safeTitle = j.title.replace(/[^a-z0-9-_]/gi, '_').substring(0, 30)
+        baseFilename = `${prefix}-JOURNAL-${safeTitle}-${safeTimestamp}.zip`
     } else {
-        // EVERYTHING
+        journalsToProcess = await prisma.journal.findMany({ where: userId ? { userId } : {} })
+    }
+
+    let isFirstJournal = true
+    for (const j of journalsToProcess) {
+        if (!isFirstJournal) await writeStream(`,`)
+        isFirstJournal = false
+
+        // Write journal info minus entries
+        const { entries, ...journalInfo } = j as any
+
+        // Start journal object
+        let jString = JSON.stringify(journalInfo)
+        jString = jString.substring(0, jString.length - 1) // pop closing bracket
+        await writeStream(`${jString},"entries":[`)
+
+        // Paginate entries
+        const BATCH_SIZE = 50
+        let skip = 0
+        let isFirstEntry = true
+
+        while (true) {
+            const batch = await prisma.entry.findMany({
+                where: { journalId: j.id },
+                include: { tags: true, images: true },
+                skip,
+                take: BATCH_SIZE,
+                orderBy: { createdAt: 'asc' }
+            })
+
+            if (batch.length === 0) break
+
+            for (const entry of batch) {
+                if (!isFirstEntry) await writeStream(`,`)
+                isFirstEntry = false
+                await writeStream(JSON.stringify(entry))
+
+                // Collect images
+                if (entry.images && entry.images.length > 0) {
+                    for (const image of entry.images) imagesToAdd.add(image.url)
+                }
+                if (entry.content && (entry.content as any).type === 'doc') {
+                    extractImages(entry.content)
+                }
+            }
+            skip += BATCH_SIZE
+        }
+
+        await writeStream(`]}`) // close journal
+    }
+    await writeStream(`]`) // close journals array
+
+    if (type !== "JOURNAL") {
         const whereUser = userId ? { userId } : {}
 
-        const journals = await prisma.journal.findMany({
-            where: whereUser,
-            include: { entries: { include: { tags: true, images: true } } }
-        })
+        // TAGS
         const tags = await prisma.tag.findMany({ where: whereUser })
+        await writeStream(`,"tags":${JSON.stringify(tags)}`)
 
-        dataToBackup.journals = journals
-        dataToBackup.tags = tags
-
-        // Collect all entries
-        for (const j of journals) {
-            if (j.entries) entries.push(...j.entries)
-        }
-
-        // Fetch Blog Posts
-        const blogPosts = await prisma.blogPost.findMany({
-            where: userId ? { authorId: userId } : {}
-        })
-        dataToBackup.blogPosts = blogPosts
-
-        // Fetch Users (only for System Backup i.e., no specific userId filter)
-        if (!userId) {
-            const users = await prisma.user.findMany()
-            dataToBackup.users = users
-        }
-
-        // Fetch Global AppConfig (Always include in full backup)
-        const appConfig = await prisma.appConfig.findFirst()
-        if (appConfig) {
-            dataToBackup.appConfig = appConfig
-        }
-    }
-
-    // 2. Prepare Zip
-    const zip = new AdmZip()
-    zip.addFile("data.json", Buffer.from(JSON.stringify(dataToBackup, null, 2)))
-
-    // 3. Add Images
-    const uploadDir = join(process.cwd(), "public", "uploads")
-    const imagesToAdd = new Set<string>()
-
-    // From Journal Entries
-    // From Journal Entries
-    for (const entry of entries) {
-        // 1. From Asset relation (if used)
-        if (entry.images && entry.images.length > 0) {
-            for (const image of entry.images) {
-                imagesToAdd.add(image.url)
-            }
-        }
-
-        // 2. From Content JSON (Tiptap)
-        if (entry.content && (entry.content as any).type === 'doc') {
-            const extractImages = (node: any) => {
-                if (node.type === 'image' && node.attrs && node.attrs.src) {
-                    imagesToAdd.add(node.attrs.src)
-                }
-                if (node.content && Array.isArray(node.content)) {
-                    node.content.forEach(extractImages)
-                }
-            }
-            extractImages(entry.content)
-        }
-    }
-
-    // From Blog Posts
-    if (dataToBackup.blogPosts) {
-        for (const post of dataToBackup.blogPosts) {
-            if (post.content) {
-                const extractImages = (node: any) => {
-                    if (node.type === 'image' && node.attrs && node.attrs.src) {
-                        imagesToAdd.add(node.attrs.src)
-                    }
-                    if (node.content && Array.isArray(node.content)) {
-                        node.content.forEach(extractImages)
-                    }
-                }
-                if ((post.content as any).type === 'doc') {
+        // BLOG POSTS
+        await writeStream(`,"blogPosts":[`)
+        let skip = 0
+        let isFirstPost = true
+        while (true) {
+            const batch = await prisma.blogPost.findMany({
+                where: userId ? { authorId: userId } : {},
+                skip, take: 50
+            })
+            if (batch.length === 0) break
+            for (const post of batch) {
+                if (!isFirstPost) await writeStream(`,`)
+                isFirstPost = false
+                await writeStream(JSON.stringify(post))
+                if (post.content && (post.content as any).type === 'doc') {
                     extractImages(post.content)
                 }
             }
+            skip += 50
+        }
+        await writeStream(`]`)
+
+        // USERS
+        if (!userId) {
+            const users = await prisma.user.findMany()
+            await writeStream(`,"users":${JSON.stringify(users)}`)
+        }
+
+        // APP CONFIG
+        const appConfig = await prisma.appConfig.findFirst()
+        if (appConfig) {
+            await writeStream(`,"appConfig":${JSON.stringify(appConfig)}`)
         }
     }
 
+    // Close global JSON
+    await writeStream(`}`)
+    writer.end()
+
+    await new Promise((resolve) => writer.on('finish', resolve))
+
+    // 2. Prepare Zip
+    const zip = new AdmZip()
+    zip.addLocalFile(tempJsonPath, "", "data.json")
+
+    // 3. Add Images
+    const uploadDir = join(process.cwd(), "public", "uploads")
     for (const url of imagesToAdd) {
         try {
             const filename = url.split('/').pop()
@@ -142,24 +190,13 @@ export async function generateBackup(options: BackupOptions) {
         }
     }
 
-    // 4. Save Backup
-    const backupDir = join(process.cwd(), "backups")
-    await mkdir(backupDir, { recursive: true })
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-    const prefix = source === "AUTO" ? "auto-backup" : "backup"
-
-    let baseFilename = `${prefix}-${type}-${timestamp}.zip`
-
-    if (type === "JOURNAL" && dataToBackup.journals && dataToBackup.journals.length === 1) {
-        const journalTitle = dataToBackup.journals[0].title
-        const safeTitle = journalTitle.replace(/[^a-z0-9-_]/gi, '_').substring(0, 30)
-        baseFilename = `${prefix}-JOURNAL-${safeTitle}-${timestamp}.zip`
-    }
-
-    const zipBuffer = zip.toBuffer()
+    // 4. Save Backup efficiently
+    const finalZipPath = join(backupDir, baseFilename)
 
     if (multipart) {
+        // Build to buffer explicitly since slicing is requested
+        // Though memory-heavy, it's what was requested
+        const zipBuffer = zip.toBuffer()
         const chunkSize = splitSize === '500MB' ? 500 * 1024 * 1024 : 250 * 1024 * 1024
         const totalSize = zipBuffer.length
         const totalParts = Math.ceil(totalSize / chunkSize)
@@ -175,8 +212,14 @@ export async function generateBackup(options: BackupOptions) {
             }
             return { message: "Backup created successfully (Multipart)", parts: totalParts, filename: baseFilename }
         }
+        // Fallthrough saves full zip if parts = 1
     }
 
-    await writeFile(join(backupDir, baseFilename), zipBuffer)
+    // Use the native promise write which avoids massive unified memory buffers in node
+    await zip.writeZipPromise(finalZipPath)
+
+    // Cleanup temporary JSON to free disk
+    await unlink(tempJsonPath).catch(() => { })
+
     return { message: "Backup created successfully", filename: baseFilename }
 }
