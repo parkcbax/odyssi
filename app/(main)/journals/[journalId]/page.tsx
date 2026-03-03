@@ -8,33 +8,49 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
 import { JournalActions } from "@/components/journal-actions"
 import { ImageWithLoader } from "@/components/ui/image-with-loader"
+import { JournalPagination } from "@/components/journal-pagination"
 
 export const dynamic = 'force-dynamic'
 
-export default async function JournalDetailsPage({ params }: { params: Promise<{ journalId: string }> }) {
+export default async function JournalDetailsPage({
+    params,
+    searchParams
+}: {
+    params: Promise<{ journalId: string }>
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
 
     const { journalId } = await params
+    const resolvedParams = await searchParams
+    const page = parseInt(resolvedParams.page as string || '1', 10)
+    const limit = 12 // 12 is good for 2 or 3 col grids
+    const skip = (page - 1) * limit
 
     const journal = await prisma.journal.findUnique({
         where: {
             id: journalId,
             userId: session.user.id
-        },
-        include: {
-            entries: {
-                orderBy: { date: 'desc' },
-                include: {
-                    tags: { select: { name: true } }
-                }
-            }
         }
     })
 
     if (!journal) {
         notFound()
     }
+
+    const entries = await prisma.entry.findMany({
+        where: { journalId: journal.id },
+        orderBy: { date: 'desc' },
+        skip,
+        take: limit,
+        include: {
+            tags: { select: { name: true } }
+        }
+    })
+
+    const totalEntries = await prisma.entry.count({ where: { journalId: journal.id } })
+    const totalPages = Math.ceil(totalEntries / limit)
 
     return (
         <div className="flex flex-col gap-6">
@@ -80,8 +96,11 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
             </div>
 
             <div className="border-t pt-6">
-                <h2 className="text-lg font-semibold mb-4">Entries ({journal.entries.length})</h2>
-                {journal.entries.length === 0 ? (
+                <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+                    <h2 className="text-lg font-semibold">Entries ({totalEntries})</h2>
+                    <JournalPagination journalId={journal.id} currentPage={page} totalPages={totalPages} />
+                </div>
+                {entries.length === 0 ? (
                     <div className="text-center py-12 border border-dashed rounded-lg bg-muted/20">
                         <p className="text-muted-foreground">No entries yet.</p>
                         <Button variant="link" asChild className="mt-2">
@@ -89,61 +108,63 @@ export default async function JournalDetailsPage({ params }: { params: Promise<{
                         </Button>
                     </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {journal.entries.map((entry) => (
-                            <Link key={entry.id} href={`/entries/${entry.id}`} className="min-w-0">
-                                <Card className="hover:bg-muted/50 transition-colors h-full flex flex-col overflow-hidden">
-                                    <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-start gap-2">
-                                            <CardTitle className="text-lg leading-tight line-clamp-1" title={entry.title}>
-                                                {entry.title}
-                                            </CardTitle>
-                                            {entry.mood && <span className="text-xl" title="Mood">{entry.mood}</span>}
-                                        </div>
-                                        <CardDescription className="flex flex-col gap-1 text-xs">
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" />
-                                                {new Date(entry.date).toLocaleDateString('en-US', { timeZone: session.user.timezone })}
-                                            </span>
-                                            {entry.locationName && (
-                                                <span className="flex items-center gap-1 truncate" title={entry.locationName}>
-                                                    <MapPin className="h-3 w-3 shrink-0" />
-                                                    {entry.locationName}
-                                                </span>
-                                            )}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex-1 flex flex-col gap-4">
-                                        <div className="flex gap-4 flex-1">
-                                            <div className="flex-1 space-y-2">
-                                                <p className="text-sm text-muted-foreground line-clamp-3 break-all">
-                                                    {getContentSnippet(entry.content)}
-                                                </p>
+                    <div className="space-y-6">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {entries.map((entry) => (
+                                <Link key={entry.id} href={`/entries/${entry.id}`} className="min-w-0">
+                                    <Card className="hover:bg-muted/50 transition-colors h-full flex flex-col overflow-hidden">
+                                        <CardHeader className="pb-2">
+                                            <div className="flex justify-between items-start gap-2">
+                                                <CardTitle className="text-lg leading-tight line-clamp-1" title={entry.title}>
+                                                    {entry.title}
+                                                </CardTitle>
+                                                {entry.mood && <span className="text-xl" title="Mood">{entry.mood}</span>}
                                             </div>
-                                            {getFirstImage(entry.content) && (
-                                                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md border bg-muted">
-                                                    <ImageWithLoader
-                                                        src={getFirstImage(entry.content)!}
-                                                        alt={entry.title}
-                                                        className="h-full w-full object-cover transition-transform hover:scale-105"
-                                                        containerClassName="h-full w-full"
-                                                    />
+                                            <CardDescription className="flex flex-col gap-1 text-xs">
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" />
+                                                    {new Date(entry.date).toLocaleDateString('en-US', { timeZone: session.user.timezone })}
+                                                </span>
+                                                {entry.locationName && (
+                                                    <span className="flex items-center gap-1 truncate" title={entry.locationName}>
+                                                        <MapPin className="h-3 w-3 shrink-0" />
+                                                        {entry.locationName}
+                                                    </span>
+                                                )}
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="flex-1 flex flex-col gap-4">
+                                            <div className="flex gap-4 flex-1">
+                                                <div className="flex-1 space-y-2">
+                                                    <p className="text-sm text-muted-foreground line-clamp-3 break-all">
+                                                        {getContentSnippet(entry.content)}
+                                                    </p>
+                                                </div>
+                                                {getFirstImage(entry.content) && (
+                                                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md border bg-muted">
+                                                        <ImageWithLoader
+                                                            src={getFirstImage(entry.content)!}
+                                                            alt={entry.title}
+                                                            className="h-full w-full object-cover transition-transform hover:scale-105"
+                                                            containerClassName="h-full w-full"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {entry.tags && entry.tags.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-auto pt-2">
+                                                    {entry.tags.map(tag => (
+                                                        <span key={tag.name} className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold overflow-hidden text-nowrap text-muted-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                                            #{tag.name}
+                                                        </span>
+                                                    ))}
                                                 </div>
                                             )}
-                                        </div>
-                                        {entry.tags && entry.tags.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-auto pt-2">
-                                                {entry.tags.map(tag => (
-                                                    <span key={tag.name} className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold overflow-hidden text-nowrap text-muted-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                                        #{tag.name}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

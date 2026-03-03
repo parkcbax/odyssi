@@ -340,7 +340,10 @@ export async function deleteEntry(id: string) {
             return { message: "Unauthorized" }
         }
 
-        await prisma.entry.delete({ where: { id } })
+        await prisma.entry.delete({
+            where: { id },
+            select: { id: true }
+        })
 
         revalidatePath("/dashboard")
         revalidatePath(`/journals/${entry.journalId}`)
