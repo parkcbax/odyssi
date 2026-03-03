@@ -59,7 +59,7 @@ export function EntryViewer({ content, locationLat, locationLng, locationName }:
         content: content,
         editorProps: {
             attributes: {
-                class: 'prose prose-lg dark:prose-invert focus:outline-none max-w-none',
+                class: 'prose prose-lg dark:prose-invert focus:outline-none max-w-none [&_object]:w-full [&_object]:min-h-[800px] [&_iframe]:w-full [&_iframe]:min-h-[800px]',
             },
         },
     })

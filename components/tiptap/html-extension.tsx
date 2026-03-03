@@ -1,14 +1,65 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Code, Eye, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const HTMLNodeView = (props: any) => {
     const { node, updateAttributes, selected, editor } = props
     const [isEditing, setIsEditing] = useState(editor.isEditable)
-
     const content = node.attrs.content || ''
+    const [processedContent, setProcessedContent] = useState(content)
+
+    useEffect(() => {
+        if (isEditing) {
+            setProcessedContent(content);
+            return;
+        }
+
+        let newContent = content;
+        const urlsToRevoke: string[] = [];
+
+        // Match full data attribute explicitly, avoiding potential regex bugs on outer <object> tags
+        const base64Regex = /data="data:application\/pdf;base64,([^"]+)"/g;
+        let match;
+
+        while ((match = base64Regex.exec(content)) !== null) {
+            const fullUri = `data:application/pdf;base64,${match[1]}`;
+
+            if (fullUri.length > 500000) {
+                try {
+                    const base64Data = match[1];
+                    const byteCharacters = atob(base64Data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+                    const blobUrl = URL.createObjectURL(blob);
+
+                    // Chromium plugins often ignore dynamic data replacements on <object>. 
+                    // Translating to an entirely new <iframe> forces a fresh PDF context instance.
+                    newContent = newContent.replace(`data="${fullUri}"`, `src="${blobUrl}"`);
+                    newContent = newContent.replace(/<object/g, '<iframe style="width: 100%; height: 800px; min-height: 800px; border: none;"').replace(/<\/object>/g, '</iframe>');
+
+                    urlsToRevoke.push(blobUrl);
+                } catch (e) {
+                    console.error("Failed to convert large PDF to Blob URL", e);
+                }
+            } else {
+                newContent = newContent.replace(`data="${fullUri}"`, `src="${fullUri}"`);
+                newContent = newContent.replace(/<object/g, '<iframe style="width: 100%; height: 800px; min-height: 800px; border: none;"').replace(/<\/object>/g, '</iframe>');
+            }
+        }
+
+        setProcessedContent(newContent);
+
+        return () => {
+            urlsToRevoke.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [content, isEditing]);
 
     return (
         <NodeViewWrapper className={cn(
@@ -57,8 +108,11 @@ const HTMLNodeView = (props: any) => {
                     />
                 ) : (
                     <div
-                        className={cn(isEditing && editor.isEditable ? "" : "")}
-                        dangerouslySetInnerHTML={{ __html: content || (editor.isEditable ? '<p class="text-muted-foreground italic text-sm text-center py-4">Empty HTML Block</p>' : '') }}
+                        className={cn(
+                            isEditing && editor.isEditable ? "" : "",
+                            "[&_object]:w-full [&_object]:h-[800px] [&_iframe]:w-full [&_iframe]:h-[800px]"
+                        )}
+                        dangerouslySetInnerHTML={{ __html: processedContent || (editor.isEditable ? '<p class="text-muted-foreground italic text-sm text-center py-4">Empty HTML Block</p>' : '') }}
                     />
                 )}
             </div>
