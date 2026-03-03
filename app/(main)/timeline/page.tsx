@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { List, Calendar as CalendarIcon } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
+import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
 
 export const dynamic = 'force-dynamic'
 
@@ -20,8 +21,8 @@ export default async function TimelinePage({
     const tag = typeof resolvedParams.tag === 'string' ? resolvedParams.tag : undefined
     const location = typeof resolvedParams.location === 'string' ? resolvedParams.location : undefined
 
-    // Fetch entries once for both views
-    const entries = await prisma.entry.findMany({
+    // Fetch entries once for both views, EXCLUDING content to avoid OOM
+    const entriesData = await prisma.entry.findMany({
         where: {
             journal: {
                 userId: session.user.id
@@ -40,12 +41,37 @@ export default async function TimelinePage({
         orderBy: {
             date: 'desc'
         },
-        include: {
+        select: {
+            id: true,
+            title: true,
+            date: true,
+            mood: true,
+            locationName: true,
             journal: true,
             tags: true,
             images: true
         }
     })
+
+    const entries = [...entriesData] as any[]
+    const batchSize = 50
+
+    for (let i = 0; i < entries.length; i += batchSize) {
+        const batchIds = entries.slice(i, i + batchSize).map(e => e.id)
+        const batchContent = await prisma.entry.findMany({
+            where: { id: { in: batchIds } },
+            select: { id: true, content: true }
+        })
+
+        const contentMap = new Map(batchContent.map(e => [e.id, e.content]))
+
+        for (let j = i; j < i + batchSize && j < entries.length; j++) {
+            const entry = entries[j]
+            const content = contentMap.get(entry.id)
+            entry.snippet = content ? getContentSnippet(content).substring(0, 300) : ""
+            entry.firstImage = content ? getFirstImage(content) : null
+        }
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">

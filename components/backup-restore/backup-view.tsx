@@ -40,6 +40,7 @@ export function BackupView({ journals, initialAutoBackup, initialInterval, lastA
     const [mediaReport, setMediaReport] = useState<any[] | null>(null)
     const [isReportExpanded, setIsReportExpanded] = useState(false)
 
+
     // Auto Backup State
     const [enableAutoBackup, setEnableAutoBackup] = useState(initialAutoBackup)
     const [autoBackupInterval, setAutoBackupInterval] = useState(initialInterval)

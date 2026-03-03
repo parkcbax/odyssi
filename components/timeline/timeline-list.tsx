@@ -92,10 +92,10 @@ export function TimelineList({ entries }: TimelineListProps) {
                                                         {entry.title}
                                                     </h3>
                                                 </div>
-                                                {getFirstImage(entry.content) && (
+                                                {entry.firstImage && (
                                                     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-muted">
                                                         <ImageWithLoader
-                                                            src={getFirstImage(entry.content)!}
+                                                            src={entry.firstImage}
                                                             alt={entry.title}
                                                             className="h-full w-full object-cover"
                                                             containerClassName="h-full w-full"
@@ -104,9 +104,9 @@ export function TimelineList({ entries }: TimelineListProps) {
                                                 )}
                                             </div>
 
-                                            {entry.content && (
+                                            {entry.snippet && (
                                                 <p className="mt-2 text-sm text-muted-foreground line-clamp-2 break-all">
-                                                    {getContentSnippet(entry.content)}
+                                                    {entry.snippet}
                                                 </p>
                                             )}
 

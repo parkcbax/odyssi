@@ -35,19 +35,25 @@ export default async function DashboardPage() {
     // We'll fetch all and filter for now if the dataset is small, or use a raw query.
     // For Odyssi, let's try a slightly better Prisma approach or raw query.
 
-    // Simplest reliable way for SQLite/PG:
-    const allEntries = await prisma.entry.findMany({
+    // Prevent OOM by only fetching the ID and dates first
+    const allEntriesDates = await prisma.entry.findMany({
         where: {
             journal: { userId: session.user.id }
         },
-        include: { journal: true }
+        select: { id: true, date: true }
     })
 
-    const onThisDayEntries = allEntries.filter(entry => {
+    const onThisDayEntryIds = allEntriesDates.filter(entry => {
         const entryDate = new Date(entry.date)
         return entryDate.getMonth() === today.getMonth() &&
             entryDate.getDate() === today.getDate() &&
             entryDate.getFullYear() < today.getFullYear()
+    }).map(e => e.id)
+
+    // Now securely fetch only the full matching entries
+    const onThisDayEntries = await prisma.entry.findMany({
+        where: { id: { in: onThisDayEntryIds } },
+        include: { journal: true }
     })
 
     return (

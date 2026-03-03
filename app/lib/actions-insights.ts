@@ -35,9 +35,10 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
         orderBy: {
             date: 'desc' // Newest first
         },
+        // Exclude content here to prevent OOM on large datasets
         select: {
+            id: true,
             date: true,
-            content: true,
             mood: true,
             locationName: true,
             tags: {
@@ -107,13 +108,24 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
         if (tempStreak > longestStreak) longestStreak = tempStreak
     }
 
-    // 3. Total Words
+    // 3. Total Words (Fetch in batches to prevent OOM)
     let totalWords = 0
-    entries.forEach(entry => {
-        const text = getContentSnippet(entry.content)
-        const count = text.trim().split(/\s+/).filter(w => w.length > 0).length
-        totalWords += count
-    })
+    const batchSize = 50
+    const entryIds = entries.map(e => e.id)
+
+    for (let i = 0; i < entryIds.length; i += batchSize) {
+        const batchIds = entryIds.slice(i, i + batchSize)
+        const batchEntries = await prisma.entry.findMany({
+            where: { id: { in: batchIds } },
+            select: { id: true, content: true }
+        })
+
+        batchEntries.forEach(entry => {
+            const text = getContentSnippet(entry.content)
+            const count = text.trim().split(/\s+/).filter(w => w.length > 0).length
+            totalWords += count
+        })
+    }
 
     // 4. Mood Distribution
     const moodMap = new Map<string, number>()
@@ -140,7 +152,18 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
         dayMap.set(dateKey, 0)
     }
 
-    entries.forEach(entry => {
+    // Pre-calculate word counts per date to avoid doing it twice or having invalid content
+    // We already have batchEntries logic above, but to be efficient, let's map it.
+    // Instead of completely rewriting, we'll just fetch full content for entries within the last 7 days only.
+    const last7DaysEntries = await prisma.entry.findMany({
+        where: {
+            id: { in: entryIds },
+            date: { gte: subDays(nowZoned, 7) }
+        },
+        select: { date: true, content: true }
+    })
+
+    last7DaysEntries.forEach(entry => {
         // Group by the User's Timezone Date
         const dateKey = formatInZone(entry.date, 'yyyy-MM-dd')
         if (dayMap.has(dateKey)) {

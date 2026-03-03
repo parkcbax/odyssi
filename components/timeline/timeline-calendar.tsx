@@ -40,7 +40,7 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
                     map.set(dateKey, entry.images[0].url)
                 } else {
                     // Fallback to embedded images in content
-                    const img = getFirstImage(entry.content)
+                    const img = entry.firstImage
                     if (img) {
                         map.set(dateKey, img)
                     }
@@ -126,10 +126,10 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
                                                         {entry.journal.title}
                                                     </div>
                                                 </div>
-                                                {getFirstImage(entry.content) && (
+                                                {entry.firstImage && (
                                                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded border bg-muted">
                                                         <ImageWithLoader
-                                                            src={getFirstImage(entry.content)!}
+                                                            src={entry.firstImage}
                                                             alt={entry.title}
                                                             className="h-full w-full object-cover"
                                                             containerClassName="h-full w-full"
@@ -140,7 +140,7 @@ export function TimelineCalendar({ entries }: TimelineCalendarProps) {
                                         </div>
 
                                         <div className="text-xs text-muted-foreground line-clamp-2">
-                                            {getContentSnippet(entry.content)}
+                                            {entry.snippet}
                                         </div>
 
                                         {(entry.locationName || (entry.tags && entry.tags.length > 0)) && (

@@ -5,7 +5,11 @@ export function getContentSnippet(content: any): string {
         const doc = typeof content === 'string' ? JSON.parse(content) : content
         let text = ""
         const traverse = (node: any) => {
-            if (node.type === 'text') text += node.text
+            if (node.type === 'text') text += node.text + " "
+            if (node.type === 'customHTML' && node.attrs?.content) {
+                const htmlText = node.attrs.content.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim()
+                text += htmlText + " "
+            }
             if (node.content) node.content.forEach(traverse)
         }
         traverse(doc)
