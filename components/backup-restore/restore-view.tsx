@@ -23,6 +23,8 @@ interface BackupFile {
     name: string
     size: number
     createdAt: string
+    isMultipart?: boolean
+    parts?: number
 }
 
 export function RestoreView() {
@@ -134,15 +136,21 @@ export function RestoreView() {
                                                 <div className="flex gap-2 text-xs text-muted-foreground mt-1 flex-wrap items-center">
                                                     {backup.name.startsWith("auto-backup") ? (
                                                         <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
-                                                            AUTO
+                                                            {backup.isMultipart ? "AUTO MULTI PART" : "AUTO"}
                                                         </span>
                                                     ) : (
                                                         <span className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
-                                                            MANUAL
+                                                            {backup.isMultipart ? "MANUAL MULTI PARTS" : "MANUAL"}
                                                         </span>
                                                     )}
                                                     <span>•</span>
                                                     <span className="font-mono">{(backup.size / 1024 / 1024).toFixed(2)} MB</span>
+                                                    {backup.isMultipart && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="font-mono text-muted-foreground">{backup.parts} Parts</span>
+                                                        </>
+                                                    )}
                                                     <span>•</span>
                                                     <span>{new Date(backup.createdAt).toLocaleDateString()} {new Date(backup.createdAt).toLocaleTimeString()}</span>
                                                     <span>•</span>

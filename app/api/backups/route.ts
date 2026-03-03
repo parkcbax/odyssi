@@ -13,22 +13,49 @@ export async function GET(req: NextRequest) {
 
     try {
         const files = await readdir(backupDir)
-        const backups = await Promise.all(
-            files.map(async (file) => {
-                if (!file.endsWith(".zip")) return null
+        const fileMap = new Map<string, any>()
 
-                const filePath = join(backupDir, file)
-                const fileStat = await stat(filePath)
+        for (const file of files) {
+            const filePath = join(backupDir, file)
+            const fileStat = await stat(filePath)
 
-                return {
+            const isZip = file.endsWith(".zip")
+            const isPart = file.match(/\.part\d+$/)
+
+            if (!isZip && !isPart) continue
+
+            if (isZip) {
+                fileMap.set(file, {
                     name: file,
                     size: fileStat.size,
-                    createdAt: fileStat.birthtime
-                }
-            })
-        )
+                    createdAt: fileStat.birthtime,
+                    isMultipart: false
+                })
+            } else if (isPart) {
+                const baseName = file.replace(/\.part\d+$/, "")
 
-        const validBackups = backups.filter(Boolean).sort((a, b) => b!.createdAt.getTime() - a!.createdAt.getTime())
+                if (fileMap.has(baseName)) {
+                    const existing = fileMap.get(baseName)
+                    existing.size += fileStat.size
+                    existing.parts = (existing.parts || 1) + 1
+                    existing.isMultipart = true
+                    // Use earliest creation time across parts
+                    if (fileStat.birthtime < existing.createdAt) {
+                        existing.createdAt = fileStat.birthtime
+                    }
+                } else {
+                    fileMap.set(baseName, {
+                        name: baseName,
+                        size: fileStat.size,
+                        createdAt: fileStat.birthtime,
+                        parts: 1,
+                        isMultipart: true
+                    })
+                }
+            }
+        }
+
+        const validBackups = Array.from(fileMap.values()).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
         return NextResponse.json({ backups: validBackups })
     } catch (error) {
