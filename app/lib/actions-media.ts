@@ -11,18 +11,15 @@ import { revalidatePath } from "next/cache"
  * Recursively extracts all image URLs starting with /uploads/ from a Tiptap JSON object.
  */
 function extractUploadsFromJson(json: any, urls: Map<string, any[]>, source: { type: string, id: string, title: string }) {
-    if (!json || typeof json !== 'object') return
+    if (!json) return
 
-    if (json.type === 'image' && json.attrs?.src?.startsWith('/uploads/')) {
-        const url = json.attrs.src
+    const str = typeof json === 'string' ? json : JSON.stringify(json)
+    const regex = /\/uploads\/[a-zA-Z0-9_\-\.]+/g
+    let match;
+    while ((match = regex.exec(str)) !== null) {
+        const url = match[0]
         if (!urls.has(url)) urls.set(url, [])
         urls.get(url)?.push(source)
-    }
-
-    if (Array.isArray(json)) {
-        json.forEach(item => extractUploadsFromJson(item, urls, source))
-    } else {
-        Object.values(json).forEach(value => extractUploadsFromJson(value, urls, source))
     }
 }
 
