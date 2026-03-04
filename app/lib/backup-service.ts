@@ -169,7 +169,7 @@ export async function generateBackup(options: BackupOptions) {
     await writeStream(`}`)
     writer.end()
 
-    await new Promise((resolve) => writer.on('finish', resolve))
+    await new Promise<void>((resolve) => writer.on('finish', () => resolve()))
 
     // 2. Prepare Zip
     const zip = new AdmZip()

@@ -175,21 +175,23 @@ export function RestoreView() {
                                             <AlertDialogContent>
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>Restore {type} Backup?</AlertDialogTitle>
-                                                    <AlertDialogDescription className="space-y-2">
-                                                        <p>Are you sure you want to restore <strong>{backup.name}</strong>?</p>
-                                                        {isEverything && (
-                                                            <div className="flex items-start gap-2 bg-destructive/10 p-3 rounded-md text-destructive mt-2">
-                                                                <AlertTriangle className="h-5 w-5 shrink-0" />
-                                                                <span className="text-sm font-semibold">
-                                                                    WARNING: Restoring "EVERYTHING" will completely wipe and replace all current data. This action cannot be undone.
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        {type === "JOURNAL" && (
-                                                            <p className="text-sm text-muted-foreground">
-                                                                Note: If a journal with the same name exists, it will be restored as a copy (e.g., "My Journal - 2").
-                                                            </p>
-                                                        )}
+                                                    <AlertDialogDescription asChild>
+                                                        <div className="space-y-2">
+                                                            <p>Are you sure you want to restore <strong>{backup.name}</strong>?</p>
+                                                            {isEverything && (
+                                                                <div className="flex items-start gap-2 bg-destructive/10 p-3 rounded-md text-destructive mt-2">
+                                                                    <AlertTriangle className="h-5 w-5 shrink-0" />
+                                                                    <span className="text-sm font-semibold">
+                                                                        WARNING: Restoring "EVERYTHING" will completely wipe and replace all current data. This action cannot be undone.
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            {type === "JOURNAL" && (
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    Note: If a journal with the same name exists, it will be restored as a copy (e.g., "My Journal - 2").
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
