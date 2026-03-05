@@ -21,9 +21,31 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
     const session = await auth()
     if (!session?.user?.id) return null
 
-    // Get User Journals first
+    const userId = session.user.id
+
+    // 1. Check Cache First
+    const userWithCache = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { insightsData: true, insightsUpdatedAt: true }
+    })
+
+    const nowZoned = toZonedTime(new Date(), timezone)
+
+    if (userWithCache?.insightsData && userWithCache?.insightsUpdatedAt) {
+        const lastUpdatedZoned = toZonedTime(userWithCache.insightsUpdatedAt, timezone)
+
+        // If it was updated today (in the user's timezone), return the cached version!
+        if (isSameDay(nowZoned, lastUpdatedZoned)) {
+            console.log(`[Insights] Serving CACHED data for user: ${userId}`)
+            return userWithCache.insightsData as unknown as InsightData
+        }
+    }
+
+    console.log(`[Insights] Calculating FRESH data for user: ${userId} (Cache outdated or missing)`)
+
+    // Get User Journals
     const journals = await prisma.journal.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         select: { id: true }
     })
     const journalIds = journals.map(j => j.id)
@@ -48,8 +70,6 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
             }
         }
     })
-
-    console.log(`[Insights] User: ${session.user.id}, Journals: ${journalIds.length}, Entries: ${entries.length}, Timezone: ${timezone}`)
 
     // Helper to format a date in the user's timezone
     const formatInZone = (date: Date | string | number, fmt: string) => {
@@ -142,8 +162,6 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
     const dayMap = new Map<string, number>()
     const last7Days: { date: string, label: string }[] = []
 
-    const nowZoned = toZonedTime(new Date(), timezone)
-
     for (let i = 6; i >= 0; i--) {
         const d = subDays(nowZoned, i)
         const dateKey = format(d, 'yyyy-MM-dd')
@@ -178,8 +196,6 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
         count: dayMap.get(d.date) || 0
     }))
 
-    console.log("[Insights] Last 7 Days:", JSON.stringify(dayDistributionOrdered))
-
     // 6. Tags Distribution
     const tagMap = new Map<string, number>()
     entries.forEach(entry => {
@@ -204,7 +220,7 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
         .sort((a, b) => b.count - a.count)
         .slice(0, 10) // Top 10 locations
 
-    return {
+    const finalData: InsightData = {
         totalEntries,
         currentStreak,
         longestStreak,
@@ -214,4 +230,15 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
         tagsDistribution,
         locationDistribution
     }
+
+    // Save to Cache!
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            insightsData: finalData as any,
+            insightsUpdatedAt: new Date()
+        }
+    })
+
+    return finalData
 }
