@@ -113,14 +113,38 @@ function extractTextFromTiptap(node: any): string {
     let text = ""
 
     if (node.type === 'text' && node.text) {
-        text += node.text
+        text += node.text + " "
+    }
+
+    if (node.type === 'customHTML' && node.attrs && node.attrs.content) {
+        let rawHtml = String(node.attrs.content)
+
+        // Extract text from alt or title attributes (e.g. OneNote OCR text)
+        const attrMatches = rawHtml.match(/(?:alt|title)=\\"([^\\"]+)\\"/g) || rawHtml.match(/(?:alt|title)="([^"]+)"/g)
+        let attrText = ""
+        if (attrMatches) {
+            attrText = attrMatches.map(m => {
+                const parts = m.split('=')
+                if (parts.length > 1) {
+                    return parts[1].replace(/^"|^\\"|"$'|\\"$'/g, '')
+                }
+                return ""
+            }).join(' ') + " "
+        }
+
+        // Strip out base64 strings
+        const noBase64 = rawHtml.replace(/data:[^;]+;base64,[A-Za-z0-9+/=\-_]+/g, '')
+        // Strip out HTML tags but keep the text
+        const noTags = noBase64.replace(/<[^>]*>?/gm, ' ')
+
+        text += attrText + noTags + " "
     }
 
     if (node.content && Array.isArray(node.content)) {
         node.content.forEach((child: any) => {
-            text += extractTextFromTiptap(child) + " "
+            text += extractTextFromTiptap(child)
         })
     }
 
-    return text.trim()
+    return text.replace(/\s+/g, ' ').trim()
 }
