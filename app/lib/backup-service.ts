@@ -171,54 +171,72 @@ export async function generateBackup(options: BackupOptions) {
 
     await new Promise<void>((resolve) => writer.on('finish', () => resolve()))
 
-    // 2. Prepare Zip
-    const zip = new AdmZip()
-    zip.addLocalFile(tempJsonPath, "", "data.json")
+    const finalZipPath = join(backupDir, baseFilename)
 
-    // 3. Add Images
-    const uploadDir = join(process.cwd(), "public", "uploads")
-    for (const url of imagesToAdd) {
-        try {
+    // 2. Prepare Zip using memory-safe streaming (archiver)
+    await new Promise<void>((resolve, reject) => {
+        const output = createWriteStream(finalZipPath)
+        const archive = require('archiver')('zip', {
+            zlib: { level: 9 }, // Best compression
+            statConcurrency: 1
+        })
+
+        output.on('close', resolve)
+        archive.on('warning', (err: any) => { if (err.code !== 'ENOENT') reject(err) })
+        archive.on('error', reject)
+
+        archive.pipe(output)
+
+        // Add the massive JSON payload to zip stream
+        archive.file(tempJsonPath, { name: "data.json" })
+
+        // 3. Add Media Files to zip stream
+        const uploadDir = join(process.cwd(), "public", "uploads")
+        for (const url of imagesToAdd) {
             const filename = url.split('/').pop()
             if (filename) {
                 const filePath = join(uploadDir, filename)
-                const fileData = await readFile(filePath)
-                zip.addFile(`uploads/${filename}`, fileData)
+                archive.file(filePath, { name: `uploads/${filename}` })
             }
-        } catch (e) {
-            // console.warn(`Failed to add image to backup: ${url}`, e)
         }
-    }
 
-    // 4. Save Backup efficiently
-    const finalZipPath = join(backupDir, baseFilename)
+        archive.finalize()
+    })
 
+    // 4. Handle Multipart Slicing (Streaming Disk to Disk)
     if (multipart) {
-        // Build to buffer explicitly since slicing is requested
-        // Though memory-heavy, it's what was requested
-        const zipBuffer = zip.toBuffer()
+        const fileStat = await stat(finalZipPath)
+        const totalSize = fileStat.size
         const chunkSize = splitSize === '500MB' ? 500 * 1024 * 1024 : 250 * 1024 * 1024
-        const totalSize = zipBuffer.length
         const totalParts = Math.ceil(totalSize / chunkSize)
 
         if (totalParts > 1) {
+            const { createReadStream } = require('fs')
             for (let i = 0; i < totalParts; i++) {
                 const start = i * chunkSize
-                const end = Math.min(start + chunkSize, totalSize)
-                const chunk = zipBuffer.subarray(start, end)
-                const partFilename = `${baseFilename}.part${i + 1}`
+                const end = Math.min(start + chunkSize, totalSize) - 1 // inclusive end
 
-                await writeFile(join(backupDir, partFilename), chunk)
+                await new Promise<void>((resolve, reject) => {
+                    const partFilename = `${baseFilename}.part${i + 1}`
+                    const rs = createReadStream(finalZipPath, { start, end })
+                    const ws = createWriteStream(join(backupDir, partFilename))
+                    rs.pipe(ws)
+                    ws.on('finish', resolve)
+                    rs.on('error', reject)
+                    ws.on('error', reject)
+                })
             }
+
+            // Delete original unified file to save space
+            await unlink(finalZipPath).catch(() => { })
+
+            // Cleanup temporary JSON
+            await unlink(tempJsonPath).catch(() => { })
             return { message: "Backup created successfully (Multipart)", parts: totalParts, filename: baseFilename }
         }
-        // Fallthrough saves full zip if parts = 1
     }
 
-    // Use the native promise write which avoids massive unified memory buffers in node
-    await zip.writeZipPromise(finalZipPath)
-
-    // Cleanup temporary JSON to free disk
+    // Cleanup temporary JSON
     await unlink(tempJsonPath).catch(() => { })
 
     return { message: "Backup created successfully", filename: baseFilename }
