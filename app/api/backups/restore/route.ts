@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { readFile, writeFile, mkdir, readdir, rm, access, copyFile } from "fs/promises"
-import { createReadStream } from "fs"
+import { createReadStream, createWriteStream } from "fs"
 import { join } from "path"
 import { tmpdir } from "os"
 import { pipeline } from "stream/promises"
@@ -101,7 +101,11 @@ export async function POST(req: NextRequest) {
         parts = [filename];
     } catch {
         const dirFiles = await readdir(backupDir);
-        parts = dirFiles.filter(f => f.startsWith(filename + ".part")).sort();
+        parts = dirFiles.filter(f => f.startsWith(filename + ".part")).sort((a, b) => {
+            const nA = parseInt(a.match(/\.part(\d+)/)?.[1] || "0");
+            const nB = parseInt(b.match(/\.part(\d+)/)?.[1] || "0");
+            return nA - nB;
+        });
         if (parts.length === 0) {
             return NextResponse.json({ error: "Backup file not found" }, { status: 404 });
         }
@@ -113,27 +117,25 @@ export async function POST(req: NextRequest) {
         await mkdir(tempExtractPath, { recursive: true });
 
         // 2. Stream extraction (prevents RAM caching entire ZIP archive!)
-        const combinedStream = new PassThrough();
+        let targetZipPath = join(backupDir, parts[0]);
 
-        // Feed parts linearly matching multipart sequential boundaries
-        const pumpParts = async () => {
-            try {
-                for (const p of parts) {
-                    const rs = createReadStream(join(backupDir, p));
-                    await new Promise<void>((resolve, reject) => {
-                        rs.pipe(combinedStream, { end: false });
-                        rs.on('end', () => resolve());
-                        rs.on('error', reject);
-                    });
-                }
-                combinedStream.end();
-            } catch (err) {
-                combinedStream.destroy(err as any);
+        if (parts.length > 1) {
+            targetZipPath = join(tempExtractPath, "combined.zip");
+            const ws = createWriteStream(targetZipPath);
+            for (const p of parts) {
+                const rs = createReadStream(join(backupDir, p));
+                await new Promise<void>((resolve, reject) => {
+                    rs.pipe(ws, { end: false });
+                    rs.on('end', () => resolve());
+                    rs.on('error', reject);
+                });
             }
-        };
+            ws.end();
+            await new Promise<void>(resolve => ws.on('finish', resolve));
+        }
 
-        const extracting = pipeline(combinedStream, unzipper.Extract({ path: tempExtractPath }));
-        await Promise.all([pumpParts(), extracting]);
+        const directory = await unzipper.Open.file(targetZipPath);
+        await directory.extract({ path: tempExtractPath });
 
         // 3. Process the extracted artifacts locally 
         const dataJsonPath = join(tempExtractPath, "data.json");
@@ -189,26 +191,92 @@ export async function POST(req: NextRequest) {
             return str.replace(/\u0000/g, '');
         };
 
-        const limitDepth = (obj: any, currentDepth = 0, maxDepth = 20): any => {
-            if (obj === null || obj === undefined) return obj;
-            if (currentDepth >= maxDepth) {
-                return typeof obj === 'string' ? obj.substring(0, 100) + '...[truncated depth]' : null;
+        const processStringValue = async (s: string): Promise<string> => {
+            let result = s.replace(/\u0000/g, '');
+
+            // 1. Detect massive strings (e.g. 2MB+ OCR blobs)
+            // Increased to 2MB to avoid truncating legitimate long blog posts.
+            if (result.length > 2000000 && !result.includes(';base64,')) {
+                return result.substring(0, 1000) + "... [Massive data blob truncated safely]";
             }
+
+            // 2. Extract Base64 images if present
+            if (result.includes('data:') && result.includes(';base64,')) {
+                const matches: Array<{ full: string, mime: string, base64: string }> = [];
+                let pos = 0;
+                while (true) {
+                    const start = result.indexOf('data:', pos);
+                    if (start === -1) break;
+
+                    const marker = ';base64,';
+                    const markerIndex = result.indexOf(marker, start);
+                    if (markerIndex === -1 || markerIndex > start + 150) {
+                        pos = start + 5;
+                        continue;
+                    }
+
+                    const mime = result.substring(start + 5, markerIndex);
+
+                    let end = -1;
+                    const potentialEnds = ['"', "'", " ", ">", "}", "]", "\\n", "\n"];
+                    for (const char of potentialEnds) {
+                        const idx = result.indexOf(char, markerIndex);
+                        if (idx !== -1) {
+                            if (end === -1 || idx < end) end = idx;
+                        }
+                    }
+                    if (end === -1) end = result.length;
+
+                    const base64Data = result.substring(markerIndex + marker.length, end);
+                    const fullMatch = result.substring(start, end);
+
+                    matches.push({ full: fullMatch, mime, base64: base64Data });
+                    pos = end;
+                }
+
+                if (matches.length > 0) {
+                    const { writeFile, mkdir } = await import('fs/promises');
+                    const uploadDir = join(process.cwd(), "public", "uploads");
+                    try { await mkdir(uploadDir, { recursive: true }); } catch (e) { }
+
+                    for (const m of matches) {
+                        // Extract any significant base64 image
+                        if (m.base64.length > 100) {
+                            try {
+                                // Clean common escaping if this was inside a JSON string
+                                const cleanBase64 = m.base64.replace(/\\[nrt]/g, '').replace(/\\\//g, '/');
+                                const buffer = Buffer.from(cleanBase64, 'base64');
+                                const ext = m.mime.split('/')[1]?.split(';')[0]?.split('+')[0] || 'img';
+                                const filename = `restore-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${ext}`;
+                                await writeFile(join(uploadDir, filename), buffer);
+                                result = result.split(m.full).join(`/uploads/${filename}`);
+                            } catch (e) { }
+                        }
+                    }
+                }
+            }
+            return result;
+        };
+
+        const limitDepthAsync = async (obj: any, currentDepth = 0, maxDepth = 100): Promise<any> => {
+            if (obj === null || obj === undefined) return obj;
+            if (currentDepth >= maxDepth) return null;
+
             if (Array.isArray(obj)) {
-                // Stricter array limit to prevent flat node bloat! 
-                // 100 items per array is completely sufficient for text paras.
-                const limitedArray = obj.length > 100 ? obj.slice(0, 100) : obj;
-                return limitedArray.map(item => limitDepth(item, currentDepth + 1, maxDepth));
+                // Increased array limit significantly (2000 siblings)
+                const limited = obj.length > 2000 ? obj.slice(0, 2000) : obj;
+                const results = await Promise.all(limited.map(item => limitDepthAsync(item, currentDepth + 1, maxDepth)));
+                return results.filter(item => item !== null); // Filter out truncated deep nodes
             }
             if (typeof obj === 'object') {
                 const newObj: any = {};
                 for (const [k, v] of Object.entries(obj)) {
-                    newObj[k] = limitDepth(v, currentDepth + 1, maxDepth);
+                    newObj[k] = await limitDepthAsync(v, currentDepth + 1, maxDepth);
                 }
                 return newObj;
             }
             if (typeof obj === 'string') {
-                return obj.replace(/\u0000/g, '');
+                return processStringValue(obj);
             }
             return obj;
         };
@@ -216,73 +284,19 @@ export async function POST(req: NextRequest) {
         const sanitizePayload = async (obj: any): Promise<any> => {
             if (!obj) return obj;
             try {
-                // 1. Defend against Prisma Rust Engine stack overflow (OneNote inline span nesting panics)
-                const depthLimited = limitDepth(obj, 0, 40);
-
-                // 2. Prevent invalid null bytes and UNPAIRED SURROGATES choking Postgres JSONB or Rust Engine
-                let s = typeof depthLimited === 'string' ? depthLimited : JSON.stringify(depthLimited);
-                s = Buffer.from(s, 'utf-8').toString('utf-8');
-                s = s.replace(/\u0000/g, '');
-
-                // 3. Extract massive base64 images into physical files to avoid AST Buffer Overflow entirely
-                const extractAndSaveBase64 = async (str: string) => {
-                    const regex = /data:([a-zA-Z0-9-+\/.]+)[^"']*;base64,((?:[A-Za-z0-9+/=\-_\s]|\\[A-Za-z0-9+/=\-_\s])+)/g;
-                    let result = str;
-                    let match;
-                    const matches = [];
-                    while ((match = regex.exec(str)) !== null) {
-                        matches.push({ full: match[0], mime: match[1], base64: match[2], index: match.index });
-                    }
-
-                    if (matches.length > 0) {
-                        const { writeFile, mkdir } = await import('fs/promises');
-                        const { join } = await import('path');
-                        const uploadDir = join(process.cwd(), "public", "uploads");
-                        try { await mkdir(uploadDir, { recursive: true }); } catch (e) { }
-
-                        for (const m of matches) {
-                            if (m.base64.length > 50000) { // Only extract if > ~37KB
-                                try {
-                                    // Clean JSON-encoded newlines and slashes so Buffer doesn't parse them as base64 chars
-                                    const decodedBase64 = m.base64.replace(/\\[nrt]/g, '').replace(/\\\//g, '/');
-                                    const buffer = Buffer.from(decodedBase64, 'base64');
-                                    const ext = m.mime.split('/')[1]?.split('+')[0] || 'img';
-                                    const filename = `restore-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${ext}`;
-                                    const filepath = join(uploadDir, filename);
-                                    await writeFile(filepath, buffer);
-                                    result = result.split(m.full).join(`/uploads/${filename}`);
-                                } catch (e) {
-                                    console.error("Failed to extract base64 to file", e);
-                                }
-                            }
-                        }
-                    }
-                    return result;
-                };
-
-                s = await extractAndSaveBase64(s);
-
-                // 3.5. Truncate insanely massive alt or title attributes in OneNote HTML blobs.
-                // OneNote exports often contain 10MB+ pure text wrapped in <img alt="OCR TEXT...">
-                s = s.replace(/(?:alt|title)=\\"([\s\S]*?)\\"/g, (match, content) => {
-                    return content.length > 1000 ? `alt=\\"${content.substring(0, 1000)}... [Massive OCR Text Truncated]\\"` : match;
-                });
-
-                // 4. Absolute V8 Out Of Memory ceiling (1.5MB) after Base64 extraction
-                if (s.length > 1500000) {
-                    return typeof obj === 'string'
-                        ? s.substring(0, 1500000) + "... [Extremely massive payload >1.5MB truncated safely]"
-                        : { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Entry text content exceeded safe 1.5MB limit." }] }] };
+                // If content is a doubly-stringified JSON string, parse it first
+                let target = obj;
+                if (typeof obj === 'string' && (obj.startsWith('{') || obj.startsWith('['))) {
+                    try { target = JSON.parse(obj); } catch (e) { }
                 }
 
-                return typeof obj === 'string' ? s : JSON.parse(s);
+                return await limitDepthAsync(target, 0, 100);
             } catch (e) {
-                console.error("CRITICAL SANITIZE ERROR FOR ENTRY:", e);
-                return typeof obj === 'string'
-                    ? "Content Error"
-                    : { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Entry failed JSON parser recovery." }] }] };
+                console.error("CRITICAL SANITIZE ERROR:", e);
+                return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Entry failed recovery." }] }] };
             }
         };
+
 
         // 5. Heavy database transaction mapping utilizing robust stream pumping internally
         const tx = prisma;
