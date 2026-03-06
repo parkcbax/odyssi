@@ -130,7 +130,7 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
 
     // 3. Total Words (Fetch in batches to prevent OOM)
     let totalWords = 0
-    const batchSize = 50
+    const batchSize = 10 // Reduced from 50 to tightly control memory spikes caused by giant image payloads
     const entryIds = entries.map(e => e.id)
 
     for (let i = 0; i < entryIds.length; i += batchSize) {
