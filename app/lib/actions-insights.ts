@@ -145,6 +145,9 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
             const count = text.trim().split(/\s+/).filter(w => w.length > 0).length
             totalWords += count
         })
+
+        // Yield the event loop to prevent server lockup on massive NAS DB reads
+        await new Promise(r => setTimeout(r, 10))
     }
 
     // 4. Mood Distribution

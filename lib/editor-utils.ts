@@ -7,7 +7,9 @@ export function getContentSnippet(content: any): string {
         const traverse = (node: any) => {
             if (node.type === 'text') text += node.text + " "
             if (node.type === 'customHTML' && node.attrs?.content) {
-                const htmlText = node.attrs.content.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim()
+                // Strip massive base64 images FIRST before running the expensive HTML tag regex
+                const withoutBase64 = node.attrs.content.replace(/src="data:image\/[^;]+;base64,[^"]+"/gi, '')
+                const htmlText = withoutBase64.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim()
                 text += htmlText + " "
             }
             if (node.content) node.content.forEach(traverse)
