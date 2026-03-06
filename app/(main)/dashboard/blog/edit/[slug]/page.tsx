@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { notFound, redirect } from "next/navigation"
 import { BlogEditor } from "@/components/blog/blog-editor"
 
-export default async function EditBlogPostPage({ params }: { params: { slug: string } }) {
+export default async function EditBlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
     const session = await auth()
     if (!session?.user?.id) redirect("/login")
 

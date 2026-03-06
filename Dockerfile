@@ -27,6 +27,9 @@ RUN npx prisma generate
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# Cap Node memory to 1.5GB to avoid starving the NAS OS during build
+ENV NODE_OPTIONS="--max-old-space-size=1536"
+
 RUN npm run build
 
 # 3. Production image, copy all the files and run next
