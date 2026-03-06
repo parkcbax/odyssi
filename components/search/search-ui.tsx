@@ -33,25 +33,37 @@ export function SearchUI() {
         handleSearch(term)
     }
 
-    // Function to highlight text
+    // Function to highlight text securely without regex crashing
     const Highlight = ({ text, highlight }: { text: string, highlight: string }) => {
         if (!highlight.trim()) {
             return <span>{text}</span>
         }
-        const parts = text.split(new RegExp(`(${highlight})`, 'gi'))
-        return (
-            <span>
-                {parts.map((part, i) =>
-                    part.toLowerCase() === highlight.toLowerCase() ? (
-                        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded-sm px-0.5 text-inherit">
-                            {part}
-                        </mark>
-                    ) : (
-                        part
-                    )
-                )}
-            </span>
-        )
+
+        // Safely escape any regex special characters in the search query
+        const escapeRegExp = (string: string) => {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+        }
+
+        try {
+            const safeHighlight = escapeRegExp(highlight)
+            const parts = text.split(new RegExp(`(${safeHighlight})`, 'gi'))
+            return (
+                <span>
+                    {parts.map((part, i) =>
+                        part.toLowerCase() === highlight.toLowerCase() ? (
+                            <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded-sm px-0.5 text-inherit">
+                                {part}
+                            </mark>
+                        ) : (
+                            part
+                        )
+                    )}
+                </span>
+            )
+        } catch (e) {
+            // Fallback just in case some weird unicode combination still breaks it
+            return <span>{text}</span>
+        }
     }
 
     return (
