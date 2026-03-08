@@ -15,15 +15,16 @@ export type InsightData = {
     dayDistribution: { day: string; count: number }[]
     tagsDistribution: { tag: string; count: number }[]
     locationDistribution: { location: string; count: number }[]
+    updatedAt: Date
 }
 
-export async function getInsightsData(timezone: string = "UTC"): Promise<InsightData | null> {
+export async function getInsightsData(timezone: string = "UTC", force: boolean = false): Promise<InsightData | null> {
     const session = await auth()
     if (!session?.user?.id) return null
 
     const userId = session.user.id
 
-    // 1. Check Cache First
+    // 1. Check Cache First (unless forced)
     const userWithCache = await prisma.user.findUnique({
         where: { id: userId },
         select: { insightsData: true, insightsUpdatedAt: true }
@@ -31,17 +32,21 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
 
     const nowZoned = toZonedTime(new Date(), timezone)
 
-    if (userWithCache?.insightsData && userWithCache?.insightsUpdatedAt) {
+    if (!force && userWithCache?.insightsData && userWithCache?.insightsUpdatedAt) {
         const lastUpdatedZoned = toZonedTime(userWithCache.insightsUpdatedAt, timezone)
 
         // If it was updated today (in the user's timezone), return the cached version!
         if (isSameDay(nowZoned, lastUpdatedZoned)) {
             console.log(`[Insights] Serving CACHED data for user: ${userId}`)
-            return userWithCache.insightsData as unknown as InsightData
+            const cachedData = userWithCache.insightsData as unknown as InsightData
+            return {
+                ...cachedData,
+                updatedAt: userWithCache.insightsUpdatedAt
+            }
         }
     }
 
-    console.log(`[Insights] Calculating FRESH data for user: ${userId} (Cache outdated or missing)`)
+    console.log(`[Insights] Calculating FRESH data for user: ${userId} (Force: ${force}, Cache outdated or missing)`)
 
     // Get User Journals
     const journals = await prisma.journal.findMany({
@@ -88,14 +93,15 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
 
     if (uniqueDates.length > 0) {
         const now = new Date()
-        const today = formatInZone(now, 'yyyy-MM-dd')
-        const yesterday = formatInZone(subDays(toZonedTime(now, timezone), 1), 'yyyy-MM-dd')
+        const today = format(nowZoned, 'yyyy-MM-dd')
+        const yesterday = format(subDays(nowZoned, 1), 'yyyy-MM-dd')
 
         // Check if streak is active (has entry today or yesterday)
-        const lastEntryDate = uniqueDates[0]
-        if (lastEntryDate === today || lastEntryDate === yesterday) {
+        const lastEntryDateStr = uniqueDates[0]
+        if (lastEntryDateStr === today || lastEntryDateStr === yesterday) {
             currentStreak = 1
-            let checkDate = toZonedTime(lastEntryDate, timezone)
+            // Use date-fns-tz safely by ensuring the string is treated as local midnight
+            let checkDate = new Date(lastEntryDateStr + 'T00:00:00')
 
             for (let i = 1; i < uniqueDates.length; i++) {
                 const prevDate = format(subDays(checkDate, 1), 'yyyy-MM-dd')
@@ -114,8 +120,8 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
             const currentDateStr = uniqueDates[i]
             const nextDateInList = uniqueDates[i + 1]
 
-            // Reconstruct date object from string to safely subtract day
-            const currentDate = new Date(currentDateStr)
+            // Reconstruct date object safely
+            const currentDate = new Date(currentDateStr + 'T00:00:00')
             const expectedPrevDate = format(subDays(currentDate, 1), 'yyyy-MM-dd')
 
             if (nextDateInList === expectedPrevDate) {
@@ -231,7 +237,8 @@ export async function getInsightsData(timezone: string = "UTC"): Promise<Insight
         moodDistribution,
         dayDistribution: dayDistributionOrdered,
         tagsDistribution,
-        locationDistribution
+        locationDistribution,
+        updatedAt: new Date()
     }
 
     // Save to Cache!

@@ -8,10 +8,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
-import { Archive, Save, Clock, Trash2, Loader2, ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
+import { Archive, Save, Clock, Trash2, Loader2, ChevronDown, ChevronRight, ExternalLink, Zap, Sparkles } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { getAppConfig, updateAppFeatures } from "@/app/lib/actions"
-import { cleanUnreferencedMedia } from "@/app/lib/actions-media"
+import { cleanUnreferencedMedia, optimizeDatabaseSearch } from "@/app/lib/actions-media"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
@@ -45,6 +45,10 @@ export function BackupView({ journals, initialAutoBackup, initialInterval, lastA
     const [enableAutoBackup, setEnableAutoBackup] = useState(initialAutoBackup)
     const [autoBackupInterval, setAutoBackupInterval] = useState(initialInterval)
     const [isSavingSettings, setIsSavingSettings] = useState(false)
+
+    // Search Optimization State
+    const [isOptimizing, setIsOptimizing] = useState(false)
+    const [optStatus, setOptStatus] = useState("")
 
     // Calculate schedule
     const getLastBackupDate = () => {
@@ -210,6 +214,32 @@ export function BackupView({ journals, initialAutoBackup, initialInterval, lastA
         }
     }
 
+    const handleOptimizeSearch = async () => {
+        setIsOptimizing(true)
+        setOptStatus("Extracting Base64 images to files...")
+
+        try {
+            const result = await optimizeDatabaseSearch()
+
+            if (result.success) {
+                toast.success(result.message)
+                setOptStatus("Done!")
+                router.refresh()
+            } else {
+                toast.error(result.message)
+                setOptStatus("Failed")
+            }
+        } catch (error) {
+            toast.error("Optimization failed")
+            setOptStatus("Error occurred")
+        } finally {
+            setTimeout(() => {
+                setIsOptimizing(false)
+                setOptStatus("")
+            }, 3000)
+        }
+    }
+
     return (
         <div className="space-y-6">
             <Card>
@@ -369,6 +399,46 @@ export function BackupView({ journals, initialAutoBackup, initialInterval, lastA
                             )}
                         </div>
                     )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                        <Sparkles className="h-5 w-5" />
+                        Search Optimization
+                    </CardTitle>
+                    <CardDescription>
+                        Extract embedded Base64 images from entries to <code className="bg-muted px-1 rounded">public/uploads</code>.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        On Synology NAS, large images stored directly inside diary entries can make search slow and inaccurate.
+                        This tool moves those images to files, matching the optimized state of your Mac restore.
+                        Search will become <strong>significantly faster</strong> after this.
+                    </p>
+
+                    {isOptimizing && (
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs text-muted-foreground animate-pulse">
+                                <span>{optStatus}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <Button
+                        onClick={handleOptimizeSearch}
+                        disabled={isOptimizing}
+                        variant="default"
+                    >
+                        {isOptimizing ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Zap className="mr-2 h-4 w-4" />
+                        )}
+                        Optimize Database Search
+                    </Button>
                 </CardContent>
             </Card>
 

@@ -25,10 +25,10 @@ RUN npx prisma generate
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Cap Node memory to 1.5GB to avoid starving the NAS OS during build
-ENV NODE_OPTIONS="--max-old-space-size=1536"
+# Increase Node memory to 4GB to allow build on emulated amd64
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 RUN npm run build
 
@@ -36,8 +36,8 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -46,7 +46,7 @@ RUN adduser --system --uid 1001 nextjs
 # Pre-install Prisma CLI to avoid runtime download/delay
 RUN npm install -g prisma
 
-# Ensure uploads and backups directories exist and are writable
+# Ensure uploads and backups directories exist for volume mapping
 RUN mkdir -p /app/public/uploads /app/backups && chown -R nextjs:nodejs /app/public/uploads /app/backups
 
 COPY --from=builder /app/public ./public
@@ -63,6 +63,6 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
+ENV PORT=3000
 
 CMD ["node", "server.js"]

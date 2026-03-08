@@ -19,16 +19,17 @@ const HTMLNodeView = (props: any) => {
         let newContent = content;
         const urlsToRevoke: string[] = [];
 
-        // Match full data attribute explicitly, avoiding potential regex bugs on outer <object> tags
-        const base64Regex = /data="data:application\/pdf;base64,([^"]+)"/g;
+        // Match both Base64 and /uploads/*.pdf URLs in <object data="...">
+        const pdfRegex = /<object[^>]+data="([^"]+(?:application\/pdf;base64|(?:\/uploads\/.*\.pdf)))"[^>]*>/g;
         let match;
 
-        while ((match = base64Regex.exec(content)) !== null) {
-            const fullUri = `data:application/pdf;base64,${match[1]}`;
+        while ((match = pdfRegex.exec(content)) !== null) {
+            const dataUri = match[1];
+            const isBase64 = dataUri.includes('base64');
 
-            if (fullUri.length > 500000) {
+            if (isBase64 && dataUri.length > 500000) {
                 try {
-                    const base64Data = match[1];
+                    const base64Data = dataUri.split(',')[1];
                     const byteCharacters = atob(base64Data);
                     const byteNumbers = new Array(byteCharacters.length);
                     for (let i = 0; i < byteCharacters.length; i++) {
@@ -36,28 +37,26 @@ const HTMLNodeView = (props: any) => {
                     }
                     const byteArray = new Uint8Array(byteNumbers);
                     const blob = new Blob([byteArray], { type: 'application/pdf' });
-
                     const blobUrl = URL.createObjectURL(blob);
 
-                    // Chromium plugins often ignore dynamic data replacements on <object>. 
-                    // Translating to an entirely new <iframe> forces a fresh PDF context instance.
-                    newContent = newContent.replace(`data="${fullUri}"`, `src="${blobUrl}"`);
-                    newContent = newContent.replace(/<object/g, '<iframe style="width: 100%; height: 800px; min-height: 800px; border: none;"').replace(/<\/object>/g, '</iframe>');
-
+                    newContent = newContent.replace(match[0], `<iframe src="${blobUrl}" style="width: 100%; height: 800px; min-height: 800px; border: none;"></iframe>`);
                     urlsToRevoke.push(blobUrl);
                 } catch (e) {
                     console.error("Failed to convert large PDF to Blob URL", e);
                 }
             } else {
-                newContent = newContent.replace(`data="${fullUri}"`, `src="${fullUri}"`);
-                newContent = newContent.replace(/<object/g, '<iframe style="width: 100%; height: 800px; min-height: 800px; border: none;"').replace(/<\/object>/g, '</iframe>');
+                // For small base64 or optimized /uploads/ paths
+                newContent = newContent.replace(match[0], `<iframe src="${dataUri}" style="width: 100%; height: 800px; min-height: 800px; border: none;"></iframe>`);
             }
         }
+
+        // Clean up any remaining closing tags if replacement was partial (though regex above replaces the whole opening tag)
+        newContent = newContent.replace(/<\/object>/g, '');
 
         setProcessedContent(newContent);
 
         return () => {
-            urlsToRevoke.forEach(url => URL.revokeObjectURL(url));
+            urlsToRevoke.forEach((url: string) => URL.revokeObjectURL(url));
         };
     }, [content, isEditing]);
 

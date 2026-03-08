@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { isAdmin } from "@/lib/auth-utils"
-import { readdir, mkdir, rename, stat } from "fs/promises"
+import { readdir, mkdir, rename, stat, writeFile } from "fs/promises"
 import { join } from "path"
 import { revalidatePath } from "next/cache"
 
@@ -144,6 +144,142 @@ export async function cleanUnreferencedMedia() {
     } catch (error) {
         console.error("Media cleanup failed:", error)
         return { success: false, message: "Cleanup failed due to an error.", mediaItems: [] }
+    }
+}
+
+/**
+ * Optimizes the database by extracting Base64 images from entries and saving them as files.
+ * This significantly speeds up search operations by removing massive blobs from the text indices.
+ */
+export async function optimizeDatabaseSearch() {
+    const session = await auth()
+    if (!isAdmin(session?.user?.email)) {
+        return { success: false, message: "Unauthorized" }
+    }
+
+    try {
+        const BATCH_SIZE = 50
+        let skip = 0
+        let optimizedCount = 0
+        let totalImagesExtracted = 0
+        let totalProcessed = 0
+
+        while (true) {
+            const batch = await prisma.entry.findMany({
+                select: { id: true, content: true, title: true },
+                skip: skip,
+                take: BATCH_SIZE,
+                orderBy: { createdAt: 'asc' }
+            })
+
+            if (batch.length === 0) break
+
+            for (const entry of batch) {
+                totalProcessed++
+                if (!entry.content) continue
+
+                let contentObj = entry.content
+                let madeChanges = false
+
+                const processString = async (s: string): Promise<string> => {
+                    let result = s.replace(/\u0000/g, '')
+
+                    // 2MB Truncation for junk
+                    if (result.length > 2000000 && !result.includes(';base64,')) {
+                        madeChanges = true
+                        return result.substring(0, 1000) + "... [Massive data blob truncated safely]"
+                    }
+
+                    if (result.includes('data:') && result.includes(';base64,')) {
+                        const matches: any[] = []
+                        let pos = 0
+                        while (true) {
+                            const start = result.indexOf('data:', pos)
+                            if (start === -1) break
+                            const marker = ';base64,'
+                            const markerIndex = result.indexOf(marker, start)
+                            if (markerIndex === -1 || markerIndex > start + 150) {
+                                pos = start + 5
+                                continue
+                            }
+
+                            let end = -1
+                            const potentialEnds = ['"', "'", " ", ">", "}", "]", "\\n", "\n"]
+                            for (const char of potentialEnds) {
+                                const idx = result.indexOf(char, markerIndex)
+                                if (idx !== -1 && (end === -1 || idx < end)) end = idx
+                            }
+                            if (end === -1) end = result.length
+
+                            const base64Data = result.substring(markerIndex + marker.length, end)
+                            const fullMatch = result.substring(start, end)
+                            matches.push({ full: fullMatch, mime: result.substring(start + 5, markerIndex), base64: base64Data })
+                            pos = end
+                        }
+
+                        if (matches.length > 0) {
+                            const uploadDir = join(process.cwd(), "public", "uploads")
+                            await mkdir(uploadDir, { recursive: true })
+
+                            for (const m of matches) {
+                                if (m.base64.length > 100) {
+                                    try {
+                                        const cleanBase64 = m.base64.replace(/\\[nrt]/g, '').replace(/\\\//g, '/')
+                                        const buffer = Buffer.from(cleanBase64, 'base64')
+                                        const ext = m.mime.split('/')[1]?.split(';')[0]?.split('+')[0] || 'img'
+                                        const filename = `opt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${ext}`
+                                        await writeFile(join(uploadDir, filename), buffer)
+                                        result = result.split(m.full).join(`/uploads/${filename}`)
+                                        madeChanges = true
+                                        totalImagesExtracted++
+                                    } catch (e) { }
+                                }
+                            }
+                        }
+                    }
+                    return result
+                }
+
+                const walker = async (obj: any): Promise<any> => {
+                    if (!obj) return obj
+                    if (Array.isArray(obj)) {
+                        const results = await Promise.all(obj.map(item => walker(item)))
+                        return results.filter(i => i !== null)
+                    }
+                    if (typeof obj === 'object') {
+                        const newObj: any = {}
+                        for (const [k, v] of Object.entries(obj)) newObj[k] = await walker(v)
+                        return newObj
+                    }
+                    if (typeof obj === 'string') return await processString(obj)
+                    return obj
+                }
+
+                const newContent = await walker(contentObj)
+
+                if (madeChanges) {
+                    await prisma.entry.update({
+                        where: { id: entry.id },
+                        data: { content: newContent }
+                    })
+                    optimizedCount++
+                }
+            }
+
+            skip += BATCH_SIZE
+            // Mandatory yield to keep server alive and allow GC to collect the old batch
+            await new Promise(r => setTimeout(r, 100))
+        }
+
+        revalidatePath('/entries')
+        return {
+            success: true,
+            message: `Optimization complete! Processed ${totalProcessed} entries, cleaned ${optimizedCount} entries, and extracted ${totalImagesExtracted} images.`
+        }
+
+    } catch (error) {
+        console.error("Optimization failed:", error)
+        return { success: false, message: "Optimization failed" }
     }
 }
 

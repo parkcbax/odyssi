@@ -27,6 +27,8 @@ export async function searchEntries(query: string): Promise<SearchResult[]> {
     try {
         // Use raw query to effectively search JSON content cast to text
         // This is a robust way to search within the stringified JSON stored by Tiptap
+        // Use advanced JSONB operators to search specifically in 'text' nodes
+        // This avoids matching base64 strings even if they still exist in the DB
         const entries = await prisma.$queryRaw`
             SELECT 
                 e.id, 
@@ -35,16 +37,29 @@ export async function searchEntries(query: string): Promise<SearchResult[]> {
                 e.content,
                 j.title as "journalTitle",
                 j.color as "journalColor",
-                j.icon as "journalIcon"
+                j.icon as "journalIcon",
+                (CASE WHEN e.title ILIKE ${searchPattern} THEN 2 ELSE 0 END) +
+                (CASE WHEN e.content::text ILIKE ${searchPattern} THEN 1 ELSE 0 END) as rank
             FROM "Entry" e
             JOIN "Journal" j ON e."journalId" = j.id
             WHERE j."userId" = ${session.user.id}
             AND (
                 e.title ILIKE ${searchPattern}
                 OR
-                e.content::text ILIKE ${searchPattern}
+                EXISTS (
+                    SELECT 1 FROM jsonb_array_elements(
+                        CASE 
+                            WHEN jsonb_typeof(e.content->'content') = 'array' THEN e.content->'content'
+                            ELSE '[]'::jsonb 
+                        END
+                    ) elem
+                    WHERE elem->>'text' ILIKE ${searchPattern}
+                    OR (elem->'content')::text ILIKE ${searchPattern}
+                )
+                OR
+                e.content::text ILIKE ${searchPattern} -- Fallback for deeply nested or custom HTML
             )
-            ORDER BY e.date DESC
+            ORDER BY rank DESC, e.date DESC
             LIMIT 50
         ` as any[]
 

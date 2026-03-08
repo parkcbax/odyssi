@@ -2,22 +2,38 @@
 
 import { getInsightsData, InsightData } from "@/app/lib/actions-insights"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Flame, BookOpen, PenTool, Activity, Tag, MapPin } from "lucide-react"
+import { Flame, BookOpen, PenTool, Activity, Tag, MapPin, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default function InsightsPage() {
     const [data, setData] = useState<InsightData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
+
+    const fetchInsights = async (force = false) => {
+        if (force) setRefreshing(true)
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+        try {
+            const d = await getInsightsData(timezone, force)
+            setData(d)
+        } catch (error) {
+            console.error("Failed to fetch insights:", error)
+        } finally {
+            setLoading(false)
+            setRefreshing(false)
+        }
+    }
 
     useEffect(() => {
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-        getInsightsData(timezone).then(d => {
-            setData(d)
-            setLoading(false)
-        })
+        fetchInsights()
     }, [])
+
+    const handleRefresh = () => {
+        fetchInsights(true)
+    }
 
     if (loading) {
         return <div className="p-8 text-center text-muted-foreground">Loading insights...</div>
@@ -31,6 +47,23 @@ export default function InsightsPage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Insights</h1>
                     <p className="text-muted-foreground">Your writing habits and statistics.</p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        className="gap-2"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        {refreshing ? 'Refreshing...' : 'Refresh'}
+                    </Button>
+                    {data.updatedAt && (
+                        <p className="text-[10px] text-muted-foreground">
+                            Last updated: {new Date(data.updatedAt).toLocaleString()}
+                        </p>
+                    )}
                 </div>
             </div>
 

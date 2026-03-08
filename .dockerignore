@@ -5,3 +5,5 @@ node_modules
 npm-debug.log
 prisma.config.ts
 prisma/seed.ts
+public/uploads
+backups
