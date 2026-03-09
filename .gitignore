@@ -47,6 +47,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+#docker image
+odyssi_image.tar
+
 /lib/generated/prisma
 
 /backups
