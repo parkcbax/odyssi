@@ -53,6 +53,7 @@ export default async function DashboardPage() {
     // Now securely fetch only the full matching entries
     const onThisDayEntries = await prisma.entry.findMany({
         where: { id: { in: onThisDayEntryIds } },
+        orderBy: { date: 'desc' },
         include: { journal: true }
     })
 
