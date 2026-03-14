@@ -30,25 +30,31 @@ export async function generateBackup(options: BackupOptions) {
     const prefix = source === "AUTO" ? "auto-backup" : "backup"
     let baseFilename = `${prefix}-${type}-${safeTimestamp}.zip`
 
+    const mediaToAdd = new Set<string>()
+    const extractMedia = (node: any) => {
+        // Handle Tiptap image, video, audio nodes
+        if (['image', 'video', 'audio', 'file'].includes(node.type) && node.attrs && node.attrs.src) {
+            mediaToAdd.add(node.attrs.src)
+        }
+        // Also handle generic 'src' in attrs if node type is something else but has a source
+        if (node.attrs && node.attrs.src && typeof node.attrs.src === 'string') {
+            mediaToAdd.add(node.attrs.src)
+        }
+        if (node.content && Array.isArray(node.content)) {
+            node.content.forEach(extractMedia)
+        }
+    }
+
     if (type === "JOURNAL") {
         if (!journalId) throw new Error("Journal ID required")
         const j = await prisma.journal.findUnique({ where: { id: journalId, userId: userId } })
         if (!j) throw new Error("Journal not found")
         const safeTitle = j.title.replace(/[^a-z0-9-_]/gi, '_').substring(0, 30)
         baseFilename = `${prefix}-JOURNAL-${safeTitle}-${safeTimestamp}.zip`
+        if (j.coverImage) mediaToAdd.add(j.coverImage)
     }
 
     const finalZipPath = join(backupDir, baseFilename)
-
-    const imagesToAdd = new Set<string>()
-    const extractImages = (node: any) => {
-        if (node.type === 'image' && node.attrs && node.attrs.src) {
-            imagesToAdd.add(node.attrs.src)
-        }
-        if (node.content && Array.isArray(node.content)) {
-            node.content.forEach(extractImages)
-        }
-    }
 
     // 1. Prepare Zip Streaming (archiver)
     const output = createWriteStream(finalZipPath)
@@ -126,10 +132,10 @@ export async function generateBackup(options: BackupOptions) {
                     await writeStream(JSON.stringify(entry))
 
                     if (entry.images && entry.images.length > 0) {
-                        for (const image of entry.images) imagesToAdd.add(image.url)
+                        for (const image of entry.images) mediaToAdd.add(image.url)
                     }
                     if (entry.content && (entry.content as any).type === 'doc') {
-                        extractImages(entry.content)
+                        extractMedia(entry.content)
                     }
                 }
                 skip += BATCH_SIZE
@@ -159,8 +165,9 @@ export async function generateBackup(options: BackupOptions) {
                     if (!isFirstPost) await writeStream(`,`)
                     isFirstPost = false
                     await writeStream(JSON.stringify(post))
+                    if (post.featuredImage) mediaToAdd.add(post.featuredImage)
                     if (post.content && (post.content as any).type === 'doc') {
-                        extractImages(post.content)
+                        extractMedia(post.content)
                     }
                 }
                 skipBlog += 50
@@ -186,11 +193,20 @@ export async function generateBackup(options: BackupOptions) {
 
         // 3. Add Media Files to zip stream
         const uploadDir = join(process.cwd(), "public", "uploads")
-        for (const url of imagesToAdd) {
-            const filename = url.split('/').pop()
-            if (filename) {
-                const filePath = join(uploadDir, filename)
-                archive.file(filePath, { name: `uploads/${filename}` })
+
+        if (type === "EVERYTHING") {
+            // Include THE ENTIRE UPLOADS DIRECTORY for EVERYTHING backup
+            // This ensures no unreferenced files are lost, and covers all media types
+            archive.directory(uploadDir, 'uploads')
+        } else {
+            // For JOURNAL backups, only include referenced media
+            for (const url of mediaToAdd) {
+                if (!url.startsWith('/uploads/')) continue
+                const filename = url.split('/').pop()
+                if (filename) {
+                    const filePath = join(uploadDir, filename)
+                    archive.file(filePath, { name: `uploads/${filename}` })
+                }
             }
         }
 
@@ -200,7 +216,7 @@ export async function generateBackup(options: BackupOptions) {
         await zipPromise
 
     } catch (e) {
-        jsonStream.destroy()
+        if (jsonStream) jsonStream.destroy()
         throw e
     }
 
