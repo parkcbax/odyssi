@@ -9,8 +9,12 @@ interface ImageWithLoaderProps extends Omit<React.ComponentProps<typeof Image>, 
     containerClassName?: string
 }
 
-export function ImageWithLoader({ className, containerClassName, alt, src, ...props }: ImageWithLoaderProps) {
+export function ImageWithLoader({ className, containerClassName, alt, src, unoptimized, ...props }: ImageWithLoaderProps) {
     const [isLoading, setIsLoading] = useState(true)
+
+    // Automatically bypass optimization for local images with special characters that break Next.js internal fetcher
+    // '@' is often interpreted as userinfo in internal fetch URLs, causing "null" resource errors.
+    const shouldBypassOptimization = typeof src === 'string' && (src.includes('@') || src.startsWith('http') || src.startsWith('data:'));
 
     return (
         <div className={cn("relative overflow-hidden", containerClassName)}>
@@ -26,6 +30,7 @@ export function ImageWithLoader({ className, containerClassName, alt, src, ...pr
                 onLoad={() => setIsLoading(false)}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                unoptimized={unoptimized || shouldBypassOptimization}
                 {...props}
             />
         </div>
