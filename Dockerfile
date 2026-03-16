@@ -8,10 +8,12 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN \
-  if [ -f package-lock.json ]; then npm ci; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+RUN npm config set fetch-retry-maxtimeout 600000 && \
+    npm config set fetch-retry-mintimeout 100000 && \
+    npm config set fetch-retries 10 && \
+    if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; \
+    else echo "Lockfile not found." && exit 1; \
+    fi
 
 # 2. Rebuild the source code only when needed
 FROM node:22-alpine AS builder
@@ -43,8 +45,10 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Pre-install Prisma CLI to avoid runtime download/delay
-# Pre-install Prisma CLI to avoid runtime download/delay
-RUN npm install -g prisma
+RUN npm config set fetch-retry-maxtimeout 600000 && \
+    npm config set fetch-retry-mintimeout 100000 && \
+    npm config set fetch-retries 10 && \
+    npm install -g prisma
 
 # Ensure uploads and backups directories exist for volume mapping
 RUN mkdir -p /app/public/uploads /app/backups && chown -R nextjs:nodejs /app/public/uploads /app/backups
