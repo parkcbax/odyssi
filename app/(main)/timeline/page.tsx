@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { List, Calendar as CalendarIcon } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
-import { getContentSnippet, getFirstImage } from "@/lib/editor-utils"
+import { getContentSnippet, getFirstImage, getAllImages } from "@/lib/editor-utils"
 
 export const dynamic = 'force-dynamic'
 
@@ -70,6 +70,7 @@ export default async function TimelinePage({
             const content = contentMap.get(entry.id)
             entry.snippet = content ? getContentSnippet(content).substring(0, 300) : ""
             entry.firstImage = content ? getFirstImage(content) : null
+            entry.contentImages = content ? getAllImages(content) : []
         }
     }
 

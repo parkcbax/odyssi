@@ -40,3 +40,20 @@ export function getFirstImage(content: any): string | null {
         return null
     }
 }
+export function getAllImages(content: any): string[] {
+    if (!content) return []
+    try {
+        const doc = typeof content === 'string' ? JSON.parse(content) : content
+        const images: string[] = []
+        const traverse = (node: any) => {
+            if (node.type === 'image' && node.attrs?.src) {
+                images.push(node.attrs.src)
+            }
+            if (node.content) node.content.forEach(traverse)
+        }
+        traverse(doc)
+        return images
+    } catch (e) {
+        return []
+    }
+}
