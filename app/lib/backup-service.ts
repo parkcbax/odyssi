@@ -202,10 +202,23 @@ export async function generateBackup(options: BackupOptions) {
             // For JOURNAL backups, only include referenced media
             for (const url of mediaToAdd) {
                 if (!url.startsWith('/uploads/')) continue
-                const filename = url.split('/').pop()
+                let filename = url.split('/').pop()
                 if (filename) {
-                    const filePath = join(uploadDir, filename)
-                    archive.file(filePath, { name: `uploads/${filename}` })
+                    try {
+                        // Decode URL to match actual filename on disk (e.g. %20 -> space)
+                        filename = decodeURIComponent(filename)
+                        const filePath = join(uploadDir, filename)
+                        
+                        // Check if file exists to prevent archiver from failing on missing files
+                        const exists = await stat(filePath).then(() => true).catch(() => false)
+                        if (exists) {
+                            archive.file(filePath, { name: `uploads/${filename}` })
+                        } else {
+                            console.warn(`[Backup] Referenced media not found on disk: ${filePath}`)
+                        }
+                    } catch (e) {
+                        console.error(`[Backup] Failed to process media URL: ${url}`, e)
+                    }
                 }
             }
         }

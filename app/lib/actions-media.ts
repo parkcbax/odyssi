@@ -8,18 +8,55 @@ import { join } from "path"
 import { revalidatePath } from "next/cache"
 
 /**
- * Recursively extracts all image URLs starting with /uploads/ from a Tiptap JSON object.
+ * Recursively extracts all image URLs starting with /uploads/ from a Tiptap JSON object or any string content.
+ * Improved regex to support special characters in filenames like spaces, parentheses, etc.
  */
 function extractUploadsFromJson(json: any, urls: Map<string, any[]>, source: { type: string, id: string, title: string }) {
     if (!json) return
 
     const str = typeof json === 'string' ? json : JSON.stringify(json)
-    const regex = /\/uploads\/[a-zA-Z0-9_\-\.]+/g
+    // Match /uploads/ followed by any character that is NOT a quote, whitespace, or bracket-like delimiter
+    const regex = /\/uploads\/[^"'\s<>]+/g
     let match;
     while ((match = regex.exec(str)) !== null) {
-        const url = match[0]
-        if (!urls.has(url)) urls.set(url, [])
-        urls.get(url)?.push(source)
+        let url = match[0]
+        
+        // Helper to add a URL variation
+        const addUrl = (u: string) => {
+            // Decode URL to handle %20 instead of spaces, etc.
+            let decodedUrl = u
+            try {
+                decodedUrl = decodeURIComponent(u)
+            } catch (e) { }
+
+            // Always add both original and decoded (if different) to be safe
+            const variations = [u, decodedUrl]
+            variations.forEach(v => {
+                if (!urls.has(v)) urls.set(v, [])
+                const existingSources = urls.get(v) || []
+                const alreadyHasSource = existingSources.some(s => s.type === source.type && s.id === source.id)
+                if (!alreadyHasSource) {
+                    existingSources.push(source)
+                    urls.set(v, existingSources)
+                }
+            })
+        }
+
+        // Add the full match
+        addUrl(url)
+
+        // Heuristic: if the URL ends with punctuation that might be a text delimiter (like Markdown or plain text),
+        // add trimmed variations to be safe. This prevents under-matching when punctuation is used as a delimiter.
+        let trimmedUrl = url
+        while (trimmedUrl.length > 9) { // 9 is length of "/uploads/x"
+            const lastChar = trimmedUrl.slice(-1)
+            if (/[.,!?;:)]/.test(lastChar)) { // Common trailing delimiters
+                trimmedUrl = trimmedUrl.slice(0, -1)
+                addUrl(trimmedUrl)
+            } else {
+                break
+            }
+        }
     }
 }
 
@@ -33,8 +70,19 @@ export async function cleanUnreferencedMedia() {
         const urlSources = new Map<string, any[]>()
 
         const addSource = (url: string, source: any) => {
+            // Decode URL for matching
+            let decoded = url
+            try {
+                decoded = decodeURIComponent(url)
+            } catch (e) { }
+
             if (!urlSources.has(url)) urlSources.set(url, [])
             urlSources.get(url)?.push(source)
+
+            if (decoded !== url) {
+                if (!urlSources.has(decoded)) urlSources.set(decoded, [])
+                urlSources.get(decoded)?.push(source)
+            }
         }
 
         // 1. Scan Diary Entries
@@ -49,7 +97,7 @@ export async function cleanUnreferencedMedia() {
 
         // 2. Scan Blog Posts
         const blogPosts = await prisma.blogPost.findMany({
-            select: { id: true, title: true, content: true, featuredImage: true }
+            select: { id: true, title: true, content: true, featuredImage: true, excerpt: true }
         })
         blogPosts.forEach(post => {
             if (post.content) {
@@ -57,6 +105,9 @@ export async function cleanUnreferencedMedia() {
             }
             if (post.featuredImage?.startsWith('/uploads/')) {
                 addSource(post.featuredImage, { type: 'Featured Image', id: post.id, title: post.title })
+            }
+            if (post.excerpt) {
+                extractUploadsFromJson(post.excerpt, urlSources, { type: 'Blog Post Excerpt', id: post.id, title: post.title })
             }
         })
 
@@ -72,11 +123,14 @@ export async function cleanUnreferencedMedia() {
 
         // 4. Scan Journals
         const journals = await prisma.journal.findMany({
-            select: { id: true, title: true, coverImage: true }
+            select: { id: true, title: true, coverImage: true, description: true }
         })
         journals.forEach(journal => {
             if (journal.coverImage?.startsWith('/uploads/')) {
                 addSource(journal.coverImage, { type: 'Journal Cover', id: journal.id, title: journal.title })
+            }
+            if (journal.description) {
+                extractUploadsFromJson(journal.description, urlSources, { type: 'Journal Description', id: journal.id, title: journal.title })
             }
         })
 
@@ -90,7 +144,17 @@ export async function cleanUnreferencedMedia() {
             }
         })
 
-        // 6. List files in public/uploads
+        // 6. Scan AppConfig
+        const configs = await prisma.appConfig.findMany({
+            select: { id: true, analyticSnippet: true }
+        })
+        configs.forEach(config => {
+            if (config.analyticSnippet) {
+                extractUploadsFromJson(config.analyticSnippet, urlSources, { type: 'App Config', id: config.id, title: 'Analytic Snippet/Header' })
+            }
+        })
+
+        // 7. List files in public/uploads
         const uploadDir = join(process.cwd(), "public", "uploads")
         const trashDir = join(uploadDir, "trash")
 
@@ -99,6 +163,18 @@ export async function cleanUnreferencedMedia() {
         } catch (e) { }
 
         const files = await readdir(uploadDir)
+
+        // Pre-calculate lowercased mappings for case-insensitive lookup
+        const normalizedReferences = new Map<string, any[]>()
+        for (const [url, sources] of urlSources.entries()) {
+            const normalized = url.toLowerCase()
+            if (!normalizedReferences.has(normalized)) normalizedReferences.set(normalized, [])
+            sources.forEach(s => {
+                if (!normalizedReferences.get(normalized)?.some(ex => ex.type === s.type && ex.id === s.id)) {
+                    normalizedReferences.get(normalized)?.push(s)
+                }
+            })
+        }
 
         const mediaItems: any[] = []
         let movedCount = 0
@@ -111,7 +187,10 @@ export async function cleanUnreferencedMedia() {
             if (fileStat.isDirectory()) continue
 
             const url = `/uploads/${file}`
-            const sources = urlSources.get(url) || []
+            const normalizedUrl = url.toLowerCase()
+
+            // Match using either exact URL or normalized (decoded & lowercased) URL
+            const sources = urlSources.get(url) || normalizedReferences.get(normalizedUrl) || []
             const isReferenced = sources.length > 0
 
             if (!isReferenced) {

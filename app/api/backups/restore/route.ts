@@ -145,13 +145,27 @@ export async function POST(req: NextRequest) {
         const uploadDir = join(process.cwd(), "public", "uploads");
         await mkdir(uploadDir, { recursive: true });
 
+        let restoredFilesCount = 0;
+        let failedFilesCount = 0;
+
         try {
             const extractedUploads = await readdir(uploadsPath);
+            console.log(`[Restore] Identified ${extractedUploads.length} files in extracted uploads.`);
+            
             for (const file of extractedUploads) {
-                await copyFile(join(uploadsPath, file), join(uploadDir, file));
+                try {
+                    const sourcePath = join(uploadsPath, file);
+                    const destPath = join(uploadDir, file);
+                    await copyFile(sourcePath, destPath);
+                    restoredFilesCount++;
+                } catch (err) {
+                    console.error(`[Restore] Failed to copy file ${file}:`, err);
+                    failedFilesCount++;
+                }
             }
+            console.log(`[Restore] Finished media restoration. Success: ${restoredFilesCount}, Failed: ${failedFilesCount}`);
         } catch (e) {
-            // Ignore smoothly if 'uploads' directory mapping was empty
+            console.log(`[Restore] No media files found to restore or error reading uploads directory.`);
         }
 
         // 4. Begin identifying payload
