@@ -17,6 +17,8 @@ import { all, createLowlight } from 'lowlight'
 const lowlight = createLowlight(all)
 import { CustomHTML } from '@/components/tiptap/html-extension'
 import { LocationExtension } from '@/components/tiptap/location-extension'
+import { Color } from '@tiptap/extension-color'
+import { TextStyle } from '@tiptap/extension-text-style'
 import { useState, useEffect, forwardRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Switch } from "@/components/ui/switch"
@@ -44,9 +46,16 @@ import {
     Code,
     SquareCode,
     Braces,
-    Map
-
+    Map,
+    Palette,
+    ChevronUp
 } from 'lucide-react'
+
+const COLORS = [
+    "#718982", "#0EA5E9", "#22C55E", "#EAB308", "#EF4444", "#8B5CF6", "#F97316", "#64748B",
+    "#6366F1", "#71717A", "#EC4899", "#14B8A6", "#0F766E", "#D97706", "#4F46E5", "#9333EA",
+    "#BE123C", "#1D4ED8", "#15803D", "#4338CA"
+]
 
 const LANGUAGES = [
     { label: 'Plain Text', value: 'plaintext' },
@@ -108,6 +117,7 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isUploadingFeatured, setIsUploadingFeatured] = useState(false)
+    const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
 
     const editor = useEditor({
         immediatelyRender: false,
@@ -133,6 +143,8 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                 },
             }),
             LocationExtension,
+            TextStyle,
+            Color,
             CustomHTML,
 
         ],
@@ -242,6 +254,62 @@ export function BlogEditor({ initialData }: BlogEditorProps) {
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleBold().run()} isActive={editor?.isActive('bold')}><Bold className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleItalic().run()} isActive={editor?.isActive('italic')}><Italic className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleUnderline().run()} isActive={editor?.isActive('underline')}><UnderlineIcon className="h-4 w-4" /></ToolbarButton>
+                    <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+                        <PopoverTrigger asChild>
+                            <ToolbarButton title="Text Color" isActive={editor?.isActive('textStyle')}>
+                                <Palette className="h-4 w-4" style={{ color: editor?.getAttributes('textStyle').color }} />
+                            </ToolbarButton>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-3" align="start" onInteractOutside={(e) => e.preventDefault()}>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="font-medium text-sm">Text Color</h4>
+                                    <button 
+                                        onClick={() => editor?.chain().focus().unsetColor().run()}
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                        Default
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {COLORS.map((color) => (
+                                        <button
+                                            key={color}
+                                            type="button"
+                                            className={cn(
+                                                "h-6 w-6 rounded-full transition-all border pointer-events-auto",
+                                                editor?.isActive('textStyle', { color }) ? "border-primary scale-110" : "border-transparent hover:scale-110"
+                                            )}
+                                            style={{ backgroundColor: color }}
+                                            onClick={() => editor?.chain().focus().setColor(color).run()}
+                                            title={color}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="pt-2 border-t flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Label htmlFor="custom-color-blog" className="text-xs">Custom</Label>
+                                        <input 
+                                            id="custom-color-blog"
+                                            type="color" 
+                                            className="w-8 h-8 p-0 border-0 rounded overflow-hidden cursor-pointer"
+                                            value={editor?.getAttributes('textStyle').color || '#000000'}
+                                            onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()}
+                                        />
+                                    </div>
+                                    <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-8 w-8 p-0" 
+                                        onClick={() => setIsColorPickerOpen(false)}
+                                    >
+                                        <ChevronUp className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                     <div className="w-px h-6 bg-border mx-1" />
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor?.isActive('heading', { level: 1 })}><Heading1 className="h-4 w-4" /></ToolbarButton>
                     <ToolbarButton onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor?.isActive('heading', { level: 2 })}><Heading2 className="h-4 w-4" /></ToolbarButton>
