@@ -1,26 +1,35 @@
 import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import Image from '@tiptap/extension-image'
 import { useState, useRef } from 'react'
-import { Loader2, AlignLeft, AlignCenter, AlignRight, ScanText, FileText, Check, X } from 'lucide-react'
+import { Loader2, AlignLeft, AlignCenter, AlignRight, ScanText, FileText, Check, X, RotateCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createWorker, PSM } from 'tesseract.js'
 
 // Preprocessing helper to apply contrast & grayscale
-const preprocessImage = (src: string): Promise<string> => {
+const preprocessImage = (src: string, rotation: number = 0): Promise<string> => {
     return new Promise((resolve, reject) => {
         const img = new window.Image()
         img.crossOrigin = 'Anonymous'
         img.onload = () => {
             const canvas = document.createElement('canvas')
-            canvas.width = img.width
-            canvas.height = img.height
+            
+            if (rotation === 90 || rotation === 270) {
+                canvas.width = img.height
+                canvas.height = img.width
+            } else {
+                canvas.width = img.width
+                canvas.height = img.height
+            }
+
             const ctx = canvas.getContext('2d')
             if (!ctx) {
                 return resolve(src)
             }
 
-            // Draw original image
-            ctx.drawImage(img, 0, 0)
+            // Draw original image with rotation
+            ctx.translate(canvas.width / 2, canvas.height / 2)
+            ctx.rotate((rotation * Math.PI) / 180)
+            ctx.drawImage(img, -img.width / 2, -img.height / 2)
 
             // Apply grayscale and contrast stretch
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
@@ -60,8 +69,8 @@ const ImageNode = (props: any) => {
         if (!node.attrs.src || isScanning) return
         setIsScanning(true)
         try {
-            // First apply image preprocessing
-            const processedSrc = await preprocessImage(node.attrs.src)
+            // First apply image preprocessing and rotation
+            const processedSrc = await preprocessImage(node.attrs.src, node.attrs.rotation || 0)
 
             // Run Tesseract with both Thai and English
             const worker = await createWorker(['tha', 'eng'])
@@ -104,6 +113,7 @@ const ImageNode = (props: any) => {
                     src={node.attrs.src}
                     alt={node.attrs.alt}
                     title={node.attrs.title}
+                    style={{ transform: `rotate(${node.attrs.rotation || 0}deg)` }}
                     className={cn(
                         "rounded-md overflow-hidden w-full h-auto transition-all",
                         (selected && editor.isEditable) ? 'ring-2 ring-primary ring-offset-2' : ''
@@ -114,6 +124,13 @@ const ImageNode = (props: any) => {
                 {selected && editor.isEditable && (
                     <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1 bg-background border rounded-lg shadow-xl z-20">
                         <div className="flex items-center border-r pr-1 mr-1">
+                            <button
+                                onClick={() => updateAttributes({ rotation: ((node.attrs.rotation || 0) + 90) % 360 })}
+                                className="p-1.5 rounded hover:bg-muted transition-colors mr-1"
+                                title="Rotate 90°"
+                            >
+                                <RotateCw className="h-4 w-4" />
+                            </button>
                             <button
                                 onClick={() => updateAttributes({ align: 'left' })}
                                 className={cn("p-1.5 rounded hover:bg-muted transition-colors", align === 'left' && "bg-primary/10 text-primary")}
@@ -253,6 +270,19 @@ export const CustomImage = Image.extend({
                     }
                     return {
                         'data-ocr-text': attributes.ocrText,
+                    }
+                },
+            },
+            rotation: {
+                default: 0,
+                parseHTML: element => parseInt(element.getAttribute('data-rotation') || '0', 10),
+                renderHTML: attributes => {
+                    if (!attributes.rotation) {
+                        return {}
+                    }
+                    return {
+                        'data-rotation': attributes.rotation,
+                        style: `transform: rotate(${attributes.rotation}deg);`,
                     }
                 },
             },
