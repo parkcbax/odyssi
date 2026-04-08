@@ -9,54 +9,71 @@ import { revalidatePath } from "next/cache"
 
 /**
  * Recursively extracts all image URLs starting with /uploads/ from a Tiptap JSON object or any string content.
- * Improved regex to support special characters in filenames like spaces, parentheses, etc.
+ * Improved to handle spaces and special characters by natively traversing JSON and using better regex for strings.
  */
 function extractUploadsFromJson(json: any, urls: Map<string, any[]>, source: { type: string, id: string, title: string }) {
     if (!json) return
 
-    const str = typeof json === 'string' ? json : JSON.stringify(json)
-    // Match /uploads/ followed by any character that is NOT a quote, whitespace, or bracket-like delimiter
-    const regex = /\/uploads\/[^"'\s<>]+/g
-    let match;
-    while ((match = regex.exec(str)) !== null) {
-        let url = match[0]
-        
-        // Helper to add a URL variation
-        const addUrl = (u: string) => {
-            // Decode URL to handle %20 instead of spaces, etc.
-            let decodedUrl = u
-            try {
-                decodedUrl = decodeURIComponent(u)
-            } catch (e) { }
+    const addUrl = (u: string) => {
+        if (!u.startsWith('/uploads/')) return
+        let decodedUrl = u
+        try {
+            decodedUrl = decodeURIComponent(u)
+        } catch (e) { }
 
-            // Always add both original and decoded (if different) to be safe
-            const variations = [u, decodedUrl]
-            variations.forEach(v => {
-                if (!urls.has(v)) urls.set(v, [])
-                const existingSources = urls.get(v) || []
-                const alreadyHasSource = existingSources.some(s => s.type === source.type && s.id === source.id)
-                if (!alreadyHasSource) {
-                    existingSources.push(source)
-                    urls.set(v, existingSources)
-                }
-            })
+        const variations = [u, decodedUrl]
+        variations.forEach(v => {
+            if (!urls.has(v)) urls.set(v, [])
+            const existingSources = urls.get(v) || []
+            const alreadyHasSource = existingSources.some(s => s.type === source.type && s.id === source.id)
+            if (!alreadyHasSource) {
+                existingSources.push(source)
+                urls.set(v, existingSources)
+            }
+        })
+    }
+
+    const extractFromString = (str: string) => {
+        if (str.startsWith('/uploads/') && str.length < 500) {
+            addUrl(str.trim())
         }
 
-        // Add the full match
-        addUrl(url)
+        let match;
+        const quoteRegex = /["'](\/uploads\/[^"']+)["']/g;
+        while ((match = quoteRegex.exec(str)) !== null) { addUrl(match[1]) }
+        
+        const parenRegex = /\((\/uploads\/[^)]+)\)/g;
+        while ((match = parenRegex.exec(str)) !== null) { addUrl(match[1]) }
 
-        // Heuristic: if the URL ends with punctuation that might be a text delimiter (like Markdown or plain text),
-        // add trimmed variations to be safe. This prevents under-matching when punctuation is used as a delimiter.
-        let trimmedUrl = url
-        while (trimmedUrl.length > 9) { // 9 is length of "/uploads/x"
-            const lastChar = trimmedUrl.slice(-1)
-            if (/[.,!?;:)]/.test(lastChar)) { // Common trailing delimiters
-                trimmedUrl = trimmedUrl.slice(0, -1)
-                addUrl(trimmedUrl)
-            } else {
-                break
+        const plainRegex = /\/uploads\/[^"'\s<>()]+/g;
+        while ((match = plainRegex.exec(str)) !== null) {
+            let url = match[0]
+            while (url.length > 9) {
+                const lastChar = url.slice(-1)
+                if (/[.,!?;:)]/.test(lastChar)) {
+                    url = url.slice(0, -1)
+                } else {
+                    break
+                }
+            }
+            addUrl(url)
+        }
+    }
+
+    if (typeof json === 'object') {
+        const walker = (obj: any) => {
+            if (!obj) return
+            if (typeof obj === 'string') {
+                extractFromString(obj)
+            } else if (Array.isArray(obj)) {
+                obj.forEach(walker)
+            } else if (typeof obj === 'object') {
+                Object.values(obj).forEach(walker)
             }
         }
+        walker(json)
+    } else if (typeof json === 'string') {
+        extractFromString(json)
     }
 }
 
