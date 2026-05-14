@@ -82,36 +82,60 @@ function NetworkGraph({ data }: { data: any }) {
     const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set())
     
     useEffect(() => {
-        const { contacts, connections } = data
-        const width = 800
-        const height = 600
-        const centerX = width / 2
-        const centerY = height / 2
+        if (!data || !data.contacts.length) return
         
-        // 1. Identify the primary hub (the one with the most connections)
-        const hubId = [...contacts].sort((a, b) => {
-            const aCount = connections.filter((c: any) => c.sourceContactId === a.id || c.targetContactId === a.id).length
-            const bCount = connections.filter((c: any) => c.sourceContactId === b.id || c.targetContactId === b.id).length
-            return bCount - aCount
-        })[0]?.id
+        const { contacts, connections } = data
+        const centerX = 400
+        const centerY = 300
+        const radius = 160
+        const processedNodes: any[] = []
+        const usedIds = new Set<string>()
 
-        // 2. Arrange nodes in a radial layout
-        const radius = 220
-        const initialNodes = contacts.map((c: any, i: number) => {
-            if (c.id === hubId) {
-                return { ...c, x: centerX, y: centerY }
-            }
-            
-            // Calculate angle for satellites
-            const angle = (i / (contacts.length - 1)) * 2 * Math.PI
-            return {
-                ...c,
-                x: centerX + radius * Math.cos(angle),
-                y: centerY + radius * Math.sin(angle),
+        // Find a "Root" (hub) to start from - either the first contact or one with many links
+        const sortedByLinks = [...contacts].sort((a, b) => {
+            const aLinks = connections.filter((c: any) => c.sourceContactId === a.id || c.targetContactId === a.id).length
+            const bLinks = connections.filter((c: any) => c.sourceContactId === b.id || c.targetContactId === b.id).length
+            return bLinks - aLinks
+        })
+        const root = sortedByLinks[0]
+
+        const layoutNode = (contact: any, x: number, y: number, startAngle: number, endAngle: number, depth: number) => {
+            if (usedIds.has(contact.id)) return
+            usedIds.add(contact.id)
+            processedNodes.push({ ...contact, x, y })
+
+            const children = connections
+                .filter((c: any) => c.sourceContactId === contact.id || c.targetContactId === contact.id)
+                .map((c: any) => c.sourceContactId === contact.id ? c.targetContactId : c.sourceContactId)
+                .filter((id: string) => !usedIds.has(id))
+
+            if (children.length === 0) return
+
+            const angleRange = endAngle - startAngle
+            const angleStep = angleRange / children.length
+            const nextRadius = radius * Math.pow(0.8, depth) // Slightly smaller radius as we go deeper
+
+            children.forEach((childId: string, i: number) => {
+                const childContact = contacts.find((c: any) => c.id === childId)
+                if (childContact) {
+                    const angle = startAngle + (angleStep * i) + (angleStep / 2)
+                    const nx = x + Math.cos(angle) * nextRadius
+                    const ny = y + Math.sin(angle) * nextRadius
+                    layoutNode(childContact, nx, ny, angle - angleStep/2, angle + angleStep/2, depth + 1)
+                }
+            })
+        }
+
+        layoutNode(root, centerX, centerY, 0, Math.PI * 2, 0)
+        
+        // Add any disconnected islands
+        contacts.forEach((c: any) => {
+            if (!usedIds.has(c.id)) {
+                processedNodes.push({ ...c, x: Math.random() * 800, y: Math.random() * 600 })
             }
         })
-        
-        setNodes(initialNodes)
+
+        setNodes(processedNodes)
     }, [data])
 
     const toggleCollapse = (id: string, e: React.MouseEvent) => {
