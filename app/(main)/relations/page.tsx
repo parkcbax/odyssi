@@ -40,7 +40,7 @@ export default async function RelationsPage() {
                             Network Visualizer
                         </Button>
                     </Link>
-                    <GroupFormDialog userId={userId}>
+                    <GroupFormDialog userId={userId} groups={groups}>
                         <Button variant="outline" className="gap-2">
                             <Plus className="h-4 w-4" />
                             New Group
@@ -90,14 +90,14 @@ export default async function RelationsPage() {
                             <LayoutGrid className="h-12 w-12 mb-4" />
                             <h3 className="text-lg font-medium">No groups yet</h3>
                             <p className="text-sm text-muted-foreground mb-4">Organize your contacts into groups.</p>
-                            <GroupFormDialog userId={userId}>
+                            <GroupFormDialog userId={userId} groups={groups}>
                                 <Button>Add Group</Button>
                             </GroupFormDialog>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {groups.map(group => (
-                                <GroupCard key={group.id} group={group} />
+                                <GroupCard key={group.id} group={group} groups={groups} />
                             ))}
                         </div>
                     )}

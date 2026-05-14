@@ -21,13 +21,13 @@ export async function upsertContact(formData: FormData) {
     const userId = session.user.id
 
     const validatedFields = ContactSchema.safeParse({
-        id: formData.get("id"),
+        id: formData.get("id") || undefined,
         fullName: formData.get("fullName"),
-        email: formData.get("email"),
-        phoneNumber: formData.get("phoneNumber"),
-        notes: formData.get("notes"),
-        groupId: formData.get("groupId") === "none" ? null : formData.get("groupId"),
-        profilePicture: formData.get("profilePicture"),
+        email: formData.get("email") || undefined,
+        phoneNumber: formData.get("phoneNumber") || undefined,
+        notes: formData.get("notes") || undefined,
+        groupId: formData.get("groupId") === "none" ? null : formData.get("groupId") || undefined,
+        profilePicture: formData.get("profilePicture") || undefined,
     })
 
     if (!validatedFields.success) {
@@ -84,6 +84,7 @@ const GroupSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(1, "Group name is required"),
     description: z.string().optional(),
+    parentId: z.string().optional().nullable(),
 })
 
 export async function upsertGroup(formData: FormData) {
@@ -94,14 +95,14 @@ export async function upsertGroup(formData: FormData) {
     console.log("Raw Form Data - name:", formData.get("name"), "description:", formData.get("description"))
 
     const validatedFields = GroupSchema.safeParse({
-        id: formData.get("id"),
+        id: formData.get("id") || undefined,
         name: formData.get("name"),
-        description: formData.get("description"),
+        description: formData.get("description") || undefined,
+        parentId: formData.get("parentId") === "none" ? null : formData.get("parentId") || undefined,
     })
 
-    console.log("Upserting Group. Validated Fields:", validatedFields.success ? "Success" : "Failed", validatedFields.data)
-
     if (!validatedFields.success) {
+        console.error("Validation Failed:", JSON.stringify(validatedFields.error.format(), null, 2))
         return { errors: validatedFields.error.flatten().fieldErrors, message: "Invalid fields" }
     }
 
@@ -111,13 +112,17 @@ export async function upsertGroup(formData: FormData) {
         if (id) {
             await prisma.group.update({
                 where: { id, userId },
-                data
+                data: {
+                    ...data,
+                    parentId: data.parentId || null
+                }
             })
         } else {
             await prisma.group.create({
                 data: {
                     ...data,
-                    userId
+                    userId,
+                    parentId: data.parentId || null
                 }
             })
         }

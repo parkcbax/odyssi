@@ -16,9 +16,10 @@ import { GroupFormDialog } from "./group-form-dialog"
 
 interface GroupCardProps {
     group: any // include _count
+    groups: Group[]
 }
 
-export function GroupCard({ group }: GroupCardProps) {
+export function GroupCard({ group, groups }: GroupCardProps) {
     const handleDelete = async () => {
         if (confirm(`Are you sure you want to delete ${group.name}? This will remove all contacts from this group (but not delete them).`)) {
             const result = await deleteGroup(group.id)
@@ -44,7 +45,7 @@ export function GroupCard({ group }: GroupCardProps) {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <GroupFormDialog userId={group.userId} group={group}>
+                        <GroupFormDialog userId={group.userId} group={group} groups={groups}>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>
                         </GroupFormDialog>
                         <DropdownMenuItem className="text-destructive" onClick={handleDelete}>

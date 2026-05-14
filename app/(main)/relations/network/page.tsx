@@ -6,10 +6,15 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ZoomIn, ZoomOut, Maximize } from "lucide-react"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { User, Network, ChevronDown, ChevronRight, Share2, Users, Plus } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 export default function NetworkPage() {
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [view, setView] = useState<"map" | "tree">("map")
 
     useEffect(() => {
         getNetworkData().then(d => {
@@ -29,134 +34,299 @@ export default function NetworkPage() {
                             <ChevronLeft className="h-5 w-5" />
                         </Button>
                     </Link>
-                    <h1 className="text-3xl font-bold tracking-tight">Network Visualizer</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Network Insights</h1>
                 </div>
+                <Tabs value={view} onValueChange={(v: any) => setView(v)} className="w-auto">
+                    <TabsList>
+                        <TabsTrigger value="map" className="gap-2">
+                            <Share2 className="h-4 w-4" />
+                            Map View
+                        </TabsTrigger>
+                        <TabsTrigger value="tree" className="gap-2">
+                            <Users className="h-4 w-4" />
+                            Hierarchy Tree
+                        </TabsTrigger>
+                    </TabsList>
+                </Tabs>
             </div>
 
             <Card className="flex-1 overflow-hidden relative bg-muted/10 border-2">
-                <NetworkGraph data={data} />
-                
-                <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                    <Button variant="secondary" size="icon" className="shadow-md"><ZoomIn className="h-4 w-4" /></Button>
-                    <Button variant="secondary" size="icon" className="shadow-md"><ZoomOut className="h-4 w-4" /></Button>
-                    <Button variant="secondary" size="icon" className="shadow-md"><Maximize className="h-4 w-4" /></Button>
-                </div>
-
-                <div className="absolute top-4 left-4 bg-background/80 backdrop-blur p-3 rounded-lg border shadow-sm max-w-xs">
-                    <h3 className="font-semibold text-sm mb-1">How to use</h3>
-                    <p className="text-xs text-muted-foreground">
-                        Nodes represent your contacts. Lines represent their connections. 
-                        Click on a node to view their profile.
-                    </p>
-                </div>
+                {view === "map" ? (
+                    <>
+                        <NetworkGraph data={data} />
+                        <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+                            <Button variant="secondary" size="icon" className="shadow-md"><ZoomIn className="h-4 w-4" /></Button>
+                            <Button variant="secondary" size="icon" className="shadow-md"><ZoomOut className="h-4 w-4" /></Button>
+                            <Button variant="secondary" size="icon" className="shadow-md"><Maximize className="h-4 w-4" /></Button>
+                        </div>
+                        <div className="absolute top-4 left-4 bg-background/80 backdrop-blur p-3 rounded-lg border shadow-sm max-w-xs">
+                            <h3 className="font-semibold text-sm mb-1">Network Map</h3>
+                            <p className="text-xs text-muted-foreground">
+                                Visualizing paths between contacts. Click icons to explore connections.
+                            </p>
+                        </div>
+                    </>
+                ) : (
+                    <div className="h-full overflow-y-auto p-6 bg-background">
+                        <RelationTree data={data} />
+                    </div>
+                )}
             </Card>
         </div>
     )
 }
 
 function NetworkGraph({ data }: { data: any }) {
-    // Simple force-directed-ish layout simulation (random for now but with basic clustering)
     const [nodes, setNodes] = useState<any[]>([])
+    const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set())
     
     useEffect(() => {
         const { contacts, connections } = data
         const width = 800
         const height = 600
+        const centerX = width / 2
+        const centerY = height / 2
         
-        // Initial positions
-        const initialNodes = contacts.map((c: any, i: number) => ({
-            ...c,
-            x: Math.random() * (width - 100) + 50,
-            y: Math.random() * (height - 100) + 50,
-        }))
+        // 1. Identify the primary hub (the one with the most connections)
+        const hubId = [...contacts].sort((a, b) => {
+            const aCount = connections.filter((c: any) => c.sourceContactId === a.id || c.targetContactId === a.id).length
+            const bCount = connections.filter((c: any) => c.sourceContactId === b.id || c.targetContactId === b.id).length
+            return bCount - aCount
+        })[0]?.id
+
+        // 2. Arrange nodes in a radial layout
+        const radius = 220
+        const initialNodes = contacts.map((c: any, i: number) => {
+            if (c.id === hubId) {
+                return { ...c, x: centerX, y: centerY }
+            }
+            
+            // Calculate angle for satellites
+            const angle = (i / (contacts.length - 1)) * 2 * Math.PI
+            return {
+                ...c,
+                x: centerX + radius * Math.cos(angle),
+                y: centerY + radius * Math.sin(angle),
+            }
+        })
         
         setNodes(initialNodes)
     }, [data])
 
-    const edges = data.connections.map((conn: any) => {
+    const toggleCollapse = (id: string, e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setCollapsedNodes(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
+
+    const visibleNodes = nodes.filter(n => {
+        if (!collapsedNodes.size) return true
+        // A node is hidden if it's connected to a collapsed node
+        const isNeighborOfCollapsed = data.connections.some((c: any) => 
+            (c.targetContactId === n.id && collapsedNodes.has(c.sourceContactId)) ||
+            (c.sourceContactId === n.id && collapsedNodes.has(c.targetContactId))
+        )
+        // BUT don't hide the collapsed node itself
+        return !isNeighborOfCollapsed || collapsedNodes.has(n.id)
+    })
+
+    const visibleEdges = data.connections.filter((conn: any) => {
+        const sourceVisible = visibleNodes.some(n => n.id === conn.sourceContactId)
+        const targetVisible = visibleNodes.some(n => n.id === conn.targetContactId)
+        return sourceVisible && targetVisible && 
+               !collapsedNodes.has(conn.sourceContactId) && 
+               !collapsedNodes.has(conn.targetContactId)
+    }).map((conn: any) => {
         const source = nodes.find(n => n.id === conn.sourceContactId)
         const target = nodes.find(n => n.id === conn.targetContactId)
         return { source, target, type: conn.connectionType }
-    }).filter((e: any) => e.source && e.target)
+    }).filter((e: any) => e.source && e.target && e.source.x !== undefined && e.target.x !== undefined)
 
     return (
-        <svg viewBox="0 0 800 600" className="w-full h-full cursor-move">
+        <svg viewBox="0 0 800 600" className="w-full h-full cursor-move" preserveAspectRatio="xMidYMid meet">
             <defs>
-                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="20" refY="3.5" orient="auto">
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="35" refY="3.5" orient="auto">
                     <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
                 </marker>
             </defs>
 
             {/* Edges */}
-            {edges.map((edge: any, i: number) => (
+            {visibleEdges.map((edge: any, i: number) => (
                 <g key={i}>
                     <line 
-                        x1={edge.source.x} 
-                        y1={edge.source.y} 
-                        x2={edge.target.x} 
-                        y2={edge.target.y} 
-                        stroke="#94a3b8" 
-                        strokeWidth="1"
+                        x1={edge.source.x} y1={edge.source.y} 
+                        x2={edge.target.x} y2={edge.target.y} 
+                        stroke="#94a3b8" strokeWidth="1.5"
                         strokeDasharray={edge.type === "Introduced by" ? "4 2" : "none"}
                         markerEnd="url(#arrowhead)"
+                        className="opacity-40"
                     />
-                    <text 
-                        x={(edge.source.x + edge.target.x) / 2} 
-                        y={(edge.source.y + edge.target.y) / 2 - 5} 
-                        textAnchor="middle" 
-                        className="text-[8px] fill-muted-foreground font-medium"
-                    >
-                        {edge.type}
-                    </text>
                 </g>
             ))}
 
             {/* Nodes */}
-            {nodes.map((node: any) => (
-                <Link key={node.id} href={`/relations/${node.id}`}>
-                    <g className="cursor-pointer group">
-                        <circle 
-                            cx={node.x} 
-                            cy={node.y} 
-                            r="25" 
-                            className="fill-background stroke-primary stroke-2 group-hover:fill-accent transition-colors shadow-sm" 
-                        />
-                        {node.profilePicture ? (
-                             <clipPath id={`clip-${node.id}`}>
-                                <circle cx={node.x} cy={node.y} r="25" />
-                            </clipPath>
-                        ) : null}
+            {visibleNodes.map((node: any) => {
+                const isCollapsed = collapsedNodes.has(node.id)
+                // A node is a "hub" if it has outgoing connections OR more than 1 incoming connection
+                const outgoingCount = data.connections.filter((c: any) => c.sourceContactId === node.id).length
+                const incomingCount = data.connections.filter((c: any) => c.targetContactId === node.id).length
+                const hasConnections = outgoingCount > 0 || incomingCount > 1
+
+                return (
+                    <g key={node.id} className="cursor-pointer group">
+                        <foreignObject x={node.x - 30} y={node.y - 30} width="60" height="60">
+                            <div className={cn(
+                                "w-full h-full rounded-full p-1 transition-all duration-300",
+                                isCollapsed ? "scale-75 opacity-70" : "scale-100"
+                            )}>
+                                <Link href={`/relations/${node.id}`}>
+                                    <div className="w-full h-full rounded-full border-2 border-primary bg-background shadow-lg overflow-hidden flex items-center justify-center hover:ring-4 hover:ring-primary/20">
+                                        {node.profilePicture ? (
+                                            <img src={node.profilePicture} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="h-6 w-6 text-muted-foreground" />
+                                        )}
+                                    </div>
+                                </Link>
+                                {hasConnections && (
+                                    <button 
+                                        onClick={(e) => toggleCollapse(node.id, e)}
+                                        className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-1 shadow-md hover:scale-110 transition-transform"
+                                    >
+                                        {isCollapsed ? <Plus className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                    </button>
+                                )}
+                            </div>
+                        </foreignObject>
                         
-                        <text 
-                            x={node.x} 
-                            y={node.y + 40} 
-                            textAnchor="middle" 
-                            className="text-[10px] font-semibold fill-foreground"
-                        >
+                        <text x={node.x} y={node.y + 45} textAnchor="middle" className="text-[10px] font-bold fill-foreground">
                             {node.fullName}
                         </text>
-                        <text 
-                            x={node.x} 
-                            y={node.y + 52} 
-                            textAnchor="middle" 
-                            className="text-[8px] fill-muted-foreground"
-                        >
-                            {node.group?.name || ""}
-                        </text>
-
-                        {/* Avatar placeholder icon */}
-                        {!node.profilePicture && (
-                            <path 
-                                d={`M ${node.x-8} ${node.y+5} a 8 8 0 0 1 16 0 M ${node.x} ${node.y-10} a 5 5 0 1 1 0 10`} 
-                                fill="none" 
-                                stroke="currentColor" 
-                                strokeWidth="1.5"
-                                className="text-muted-foreground opacity-40"
-                            />
-                        )}
                     </g>
-                </Link>
-            ))}
+                )
+            })}
         </svg>
+    )
+}
+
+function RelationTree({ data }: { data: any }) {
+    // 1. Sort contacts by total connections (Centrality)
+    const sortedContacts = [...data.contacts].sort((a, b) => {
+        const aCount = data.connections.filter((c: any) => c.sourceContactId === a.id || c.targetContactId === a.id).length
+        const bCount = data.connections.filter((c: any) => c.sourceContactId === b.id || c.targetContactId === b.id).length
+        return bCount - aCount
+    })
+
+    const usedIds = new Set<string>()
+    const tree: any[] = []
+
+    // 2. Build the tree structure by picking hubs and nesting their neighbors
+    sortedContacts.forEach(contact => {
+        if (usedIds.has(contact.id)) return
+
+        const node = { ...contact, children: [] as any[] }
+        usedIds.add(contact.id)
+        
+        // Find immediate neighbors for the first level
+        const neighbors = data.connections.filter((c: any) => c.sourceContactId === contact.id || c.targetContactId === contact.id)
+        
+        neighbors.forEach((conn: any) => {
+            const targetId = conn.sourceContactId === contact.id ? conn.targetContactId : conn.sourceContactId
+            if (!usedIds.has(targetId)) {
+                const targetContact = data.contacts.find((c: any) => c.id === targetId)
+                if (targetContact) {
+                    node.children.push({ ...targetContact, connectionType: conn.connectionType })
+                    usedIds.add(targetId)
+                }
+            }
+        })
+
+        tree.push(node)
+    })
+
+    return (
+        <div className="max-w-3xl mx-auto space-y-6 pb-20">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 bg-muted/50 p-3 rounded-lg">
+                <Share2 className="h-4 w-4" />
+                <span>Smart Hierarchy: Nested view of your social connections.</span>
+            </div>
+            
+            <div className="space-y-4">
+                {tree.map(node => (
+                    <div key={node.id} className="border rounded-xl bg-background shadow-sm overflow-hidden">
+                         <TreeNode node={node} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function TreeNode({ node, depth = 0 }: { node: any, depth?: number }) {
+    const [expanded, setExpanded] = useState(depth === 0)
+    const hasChildren = node.children && node.children.length > 0
+
+    return (
+        <div className="flex flex-col">
+            <div 
+                className={cn(
+                    "flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors group",
+                    depth > 0 && "ml-8 border-l-2 border-primary/20 pl-6"
+                )}
+            >
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-background shadow-md bg-muted flex items-center justify-center shrink-0">
+                    {node.profilePicture ? (
+                        <img src={node.profilePicture} className="w-full h-full object-cover" />
+                    ) : (
+                        <User className="h-6 w-6 text-muted-foreground" />
+                    )}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <Link href={`/relations/${node.id}`} className="font-bold text-lg truncate hover:text-primary transition-colors">
+                            {node.fullName}
+                        </Link>
+                        {node.group && (
+                            <Badge variant="outline" className="text-[10px] h-4 font-normal uppercase opacity-70">
+                                {node.group.name}
+                            </Badge>
+                        )}
+                    </div>
+                </div>
+                
+                {hasChildren && (
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-2 gap-1 text-xs"
+                        onClick={() => setExpanded(!expanded)}
+                    >
+                        <Network className="h-3 w-3" />
+                        {node.children.length} relations
+                        {expanded ? <ChevronDown className="h-3 w-3 ml-1" /> : <ChevronRight className="h-3 w-3 ml-1" />}
+                    </Button>
+                )}
+            </div>
+
+            {expanded && hasChildren && (
+                <div className="bg-muted/5 pb-2">
+                    {node.children.map((child: any) => (
+                        <div key={child.id} className="flex flex-col">
+                            <div className="ml-16 py-1 flex items-center gap-2">
+                                <Badge variant="secondary" className="text-[9px] h-4 font-semibold px-2">
+                                    {child.connectionType}
+                                </Badge>
+                            </div>
+                            <TreeNode node={child} depth={depth + 1} />
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     )
 }

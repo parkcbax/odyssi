@@ -102,6 +102,11 @@ model Group {
   name        String
   description String?
   contacts    Contact[]
+  
+  // Hierarchical Groups
+  parentId    String?
+  parent      Group?    @relation("SubGroups", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Group[]   @relation("SubGroups")
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

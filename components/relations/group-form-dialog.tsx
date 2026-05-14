@@ -15,17 +15,25 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { upsertGroup } from "@/app/lib/relations-actions"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
 interface GroupFormDialogProps {
     userId: string
+    groups?: Group[]
     group?: Group
     children?: React.ReactNode
 }
 
-export function GroupFormDialog({ userId, group, children }: GroupFormDialogProps) {
+export function GroupFormDialog({ userId, groups = [], group, children }: GroupFormDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
 
@@ -67,6 +75,24 @@ export function GroupFormDialog({ userId, group, children }: GroupFormDialogProp
                         <div className="grid gap-2">
                             <Label htmlFor="description">Description</Label>
                             <Textarea id="description" name="description" defaultValue={group?.description || ""} placeholder="Description for this group..." />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="parentId">Parent Group (Optional)</Label>
+                            <Select name="parentId" defaultValue={group?.parentId || "none"}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a parent group" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No Parent (Top Level)</SelectItem>
+                                    {groups
+                                        .filter(g => g.id !== group?.id) // Prevent self-parenting
+                                        .map((g) => (
+                                            <SelectItem key={g.id} value={g.id}>
+                                                {g.name}
+                                            </SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
