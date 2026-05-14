@@ -26,6 +26,9 @@ model User {
   journals Journal[]
   tags     Tag[]
   posts    BlogPost[]
+  contacts    Contact[]
+  groups      Group[]
+  connections Connection[]
 }
 
 model Journal {
@@ -63,9 +66,61 @@ model Entry {
 
   images Asset[]
   tags   Tag[]
+  contacts Contact[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Contact {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profilePicture  String?
+  fullName        String
+  phoneNumber     String?
+  email           String?
+  notes           String?
+  
+  groupId         String?
+  group           Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  // Relationships
+  sourceConnections Connection[] @relation("SourceContact")
+  targetConnections Connection[] @relation("TargetContact")
+
+  entries         Entry[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  contacts    Contact[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Connection {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceContactId String
+  sourceContact   Contact  @relation("SourceContact", fields: [sourceContactId], references: [id], onDelete: Cascade)
+  targetContactId String
+  targetContact   Contact  @relation("TargetContact", fields: [targetContactId], references: [id], onDelete: Cascade)
+  connectionType  String
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sourceContactId, targetContactId])
 }
 
 model Asset {

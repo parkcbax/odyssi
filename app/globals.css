@@ -541,3 +541,17 @@
 .dark .hljs-attr {
   color: #d19a66;
 }
+
+/* Mention Styling */
+.mention {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.3rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.mention:hover {
+  background-color: color-mix(in srgb, var(--primary) 20%, transparent);
+}

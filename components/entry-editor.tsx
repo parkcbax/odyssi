@@ -22,6 +22,11 @@ const lowlight = createLowlight(all)
 
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
+import Mention from '@tiptap/extension-mention'
+import { ReactRenderer } from '@tiptap/react'
+import tippy from 'tippy.js'
+import { MentionList } from '@/components/tiptap/mention-list'
+import { searchContacts } from '@/app/lib/relations-actions'
 
 const COLORS = [
     "#718982", "#0EA5E9", "#22C55E", "#EAB308", "#EF4444", "#8B5CF6", "#F97316", "#64748B",
@@ -160,6 +165,69 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
             TextStyle,
             Color,
             CustomHTML,
+            Mention.configure({
+                HTMLAttributes: {
+                    class: 'mention',
+                },
+                suggestion: {
+                    render: () => {
+                        let component: any
+                        let popup: any
+
+                        return {
+                            onStart: (props: any) => {
+                                component = new ReactRenderer(MentionList, {
+                                    props,
+                                    editor: props.editor,
+                                })
+
+                                if (!props.clientRect) {
+                                    return
+                                }
+
+                                popup = tippy('body', {
+                                    getReferenceClientRect: props.clientRect,
+                                    appendTo: () => document.body,
+                                    content: component.element,
+                                    showOnCreate: true,
+                                    interactive: true,
+                                    trigger: 'manual',
+                                    placement: 'bottom-start',
+                                })[0]
+                            },
+
+                            onUpdate(props: any) {
+                                component.updateProps(props)
+
+                                if (!props.clientRect) {
+                                    return
+                                }
+
+                                popup.setProps({
+                                    getReferenceClientRect: props.clientRect,
+                                })
+                            },
+
+                            onKeyDown(props: any) {
+                                if (props.event.key === 'Escape') {
+                                    popup.hide()
+                                    return true
+                                }
+
+                                return component.ref?.onKeyDown(props)
+                            },
+
+                            onExit() {
+                                popup.destroy()
+                                component.destroy()
+                            },
+                        }
+                    },
+                    items: async ({ query }: { query: string }) => {
+                        return await searchContacts(query)
+                    },
+                },
+            }),
         ],
         content: initialData?.content || '',
         editorProps: {
@@ -196,6 +264,21 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
         if (locationLat) formData.append('locationLat', locationLat.toString())
         if (locationLng) formData.append('locationLng', locationLng.toString())
         if (tags) formData.append('tags', tags)
+
+        // Extract mentions
+        const mentions: string[] = []
+        const findMentions = (node: any) => {
+            if (node.type === 'mention' && node.attrs?.id) {
+                mentions.push(node.attrs.id)
+            }
+            if (node.content) {
+                node.content.forEach(findMentions)
+            }
+        }
+        findMentions(content)
+        if (mentions.length > 0) {
+            formData.append('contacts', mentions.join(','))
+        }
 
         let result;
         if (initialData?.id) {

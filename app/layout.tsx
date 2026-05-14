@@ -60,6 +60,7 @@ export const metadata: Metadata = {
 
 import { getAppConfig } from "@/app/lib/actions";
 import { AnalyticsInjector } from "@/components/analytics-injector";
+import { Toaster } from "@/components/ui/sonner";
 
 export default async function RootLayout({
   children,
@@ -85,6 +86,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <Toaster />
           </ThemeProvider>
         </Providers>
       </body>

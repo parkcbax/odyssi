@@ -58,6 +58,11 @@ const items = [
         url: "/search",
         icon: Search,
     },
+    {
+        title: "Relations",
+        url: "/relations",
+        icon: Users,
+    },
 ]
 
 import { usePathname } from "next/navigation"

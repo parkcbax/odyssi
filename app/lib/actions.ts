@@ -190,6 +190,7 @@ const CreateEntrySchema = z.object({
     tags: z.string().nullish(),
     locationLat: z.number().nullish(),
     locationLng: z.number().nullish(),
+    contacts: z.string().nullish(),
 })
 
 export async function createEntry(
@@ -209,15 +210,18 @@ export async function createEntry(
         tags: formData.get("tags"),
         locationLat: formData.get("locationLat") ? parseFloat(formData.get("locationLat") as string) : null,
         locationLng: formData.get("locationLng") ? parseFloat(formData.get("locationLng") as string) : null,
+        contacts: formData.get("contacts"),
     })
+
 
     if (!validatedFields.success) {
         console.error("Validation Error:", validatedFields.error)
         return { message: "Invalid fields" }
     }
 
-    const { title, content, journalId, date, mood, locationName, tags } = validatedFields.data
+    const { title, content, journalId, date, mood, locationName, tags, contacts } = validatedFields.data
     const tagList = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
+    const contactIds = contacts ? contacts.split(',').map(c => c.trim()).filter(Boolean) : []
     const userId = session.user.id
 
     console.log("Creating Entry:", { title, journalId, date, mood, locationName, tags: tagList })
@@ -238,6 +242,9 @@ export async function createEntry(
                         where: { name_userId: { name: tag, userId } },
                         create: { name: tag, userId }
                     }))
+                },
+                contacts: {
+                    connect: contactIds.map(id => ({ id }))
                 }
             }
         })
@@ -262,6 +269,7 @@ const UpdateEntrySchema = z.object({
     tags: z.string().nullish(),
     locationLat: z.number().nullish(),
     locationLng: z.number().nullish(),
+    contacts: z.string().nullish(),
 })
 
 export async function updateEntry(
@@ -282,14 +290,17 @@ export async function updateEntry(
         tags: formData.get("tags"),
         locationLat: formData.get("locationLat") ? parseFloat(formData.get("locationLat") as string) : null,
         locationLng: formData.get("locationLng") ? parseFloat(formData.get("locationLng") as string) : null,
+        contacts: formData.get("contacts"),
     })
+
 
     if (!validatedFields.success) {
         return { message: "Invalid fields" }
     }
 
-    const { id, title, content, journalId, date, mood, locationName, tags } = validatedFields.data
+    const { id, title, content, journalId, date, mood, locationName, tags, contacts } = validatedFields.data
     const tagList = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
+    const contactIds = contacts ? contacts.split(',').map(c => c.trim()).filter(Boolean) : []
     const userId = session.user.id
 
     try {
@@ -313,6 +324,10 @@ export async function updateEntry(
                         where: { name_userId: { name: tag, userId } },
                         create: { name: tag, userId }
                     }))
+                },
+                contacts: {
+                    set: [],
+                    connect: contactIds.map(id => ({ id }))
                 }
             }
         })
