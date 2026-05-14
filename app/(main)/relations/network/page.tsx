@@ -201,9 +201,7 @@ function NetworkGraph({ data }: { data: any }) {
     const visibleEdges = data.connections.filter((conn: any) => {
         const sourceVisible = visibleNodes.some(n => n.id === conn.sourceContactId)
         const targetVisible = visibleNodes.some(n => n.id === conn.targetContactId)
-        return sourceVisible && targetVisible && 
-               !collapsedNodes.has(conn.sourceContactId) && 
-               !collapsedNodes.has(conn.targetContactId)
+        return sourceVisible && targetVisible
     }).map((conn: any) => {
         const source = nodes.find(n => n.id === conn.sourceContactId)
         const target = nodes.find(n => n.id === conn.targetContactId)
@@ -242,37 +240,41 @@ function NetworkGraph({ data }: { data: any }) {
 
                 return (
                     <g key={node.id} className="cursor-pointer group">
-                        <foreignObject x={node.x - 30} y={node.y - 30} width="60" height="60">
-                            <div className={cn(
-                                "w-full h-full rounded-full p-1 transition-all duration-300",
-                                isCollapsed ? "scale-75 opacity-70" : "scale-100"
-                            )}>
-                                <Link href={`/relations/${node.id}`}>
-                                    <div className="w-full h-full rounded-full border-2 border-primary bg-background shadow-lg overflow-hidden flex items-center justify-center hover:ring-4 hover:ring-primary/20">
-                                        {node.profilePicture ? (
-                                            <img src={node.profilePicture} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <User className="h-6 w-6 text-muted-foreground" />
-                                        )}
+                        <foreignObject x={node.x - 40} y={node.y - 40} width="80" height="80" className="overflow-visible">
+                            <div className="w-full h-full flex items-center justify-center">
+                                <div className={cn(
+                                    "w-[56px] h-[56px] relative rounded-full transition-all duration-300",
+                                    isCollapsed ? "scale-75 opacity-70" : "scale-100"
+                                )}>
+                                    <Link href={`/relations/${node.id}`} className="block w-full h-full">
+                                        <div className="w-full h-full rounded-full border-2 border-primary bg-background shadow-lg overflow-hidden flex items-center justify-center hover:ring-4 hover:ring-primary/20">
+                                            {node.profilePicture ? (
+                                                <img src={node.profilePicture} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User className="h-6 w-6 text-muted-foreground" />
+                                            )}
+                                        </div>
+                                    </Link>
+                                    {hasConnections && (
+                                        <button 
+                                            onClick={(e) => toggleCollapse(node.id, e)}
+                                            className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full p-1 shadow-md hover:scale-110 transition-transform z-10"
+                                        >
+                                            {isCollapsed ? <Plus className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                        </button>
+                                    )}
+                                    <div className="absolute -bottom-2 -right-2 z-10">
+                                        <ConnectionDialog sourceContactId={node.id} allContacts={data.contacts}>
+                                            <button 
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="bg-green-600 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"
+                                                title="Add Connection"
+                                            >
+                                                <Plus className="h-3 w-3" />
+                                            </button>
+                                        </ConnectionDialog>
                                     </div>
-                                </Link>
-                                {hasConnections && (
-                                    <button 
-                                        onClick={(e) => toggleCollapse(node.id, e)}
-                                        className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-1 shadow-md hover:scale-110 transition-transform"
-                                    >
-                                        {isCollapsed ? <Plus className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                                    </button>
-                                )}
-                                <ConnectionDialog sourceContactId={node.id} allContacts={data.contacts}>
-                                    <button 
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="absolute -bottom-1 -right-1 bg-green-600 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"
-                                        title="Add Connection"
-                                    >
-                                        <Plus className="h-3 w-3" />
-                                    </button>
-                                </ConnectionDialog>
+                                </div>
                             </div>
                         </foreignObject>
                         
