@@ -205,17 +205,22 @@ export async function createConnection(formData: FormData) {
     return { message: "Success" }
 }
 
-export async function deleteConnection(sourceContactId: string, targetContactId: string) {
+export async function deleteConnection(formData: FormData) {
     const session = await auth()
     if (!session?.user?.id) return { message: "Unauthorized" }
 
+    const sourceContactId = formData.get("sourceContactId") as string
+    const targetContactId = formData.get("targetContactId") as string
+
+    if (!sourceContactId || !targetContactId) {
+        return { message: "Invalid IDs" }
+    }
+
     try {
-        await prisma.connection.delete({
+        await prisma.connection.deleteMany({
             where: {
-                sourceContactId_targetContactId: {
-                    sourceContactId,
-                    targetContactId
-                },
+                sourceContactId,
+                targetContactId,
                 userId: session.user.id
             }
         })
@@ -225,6 +230,9 @@ export async function deleteConnection(sourceContactId: string, targetContactId:
     }
 
     revalidatePath("/relations")
+    revalidatePath(`/relations/${sourceContactId}`)
+    revalidatePath(`/relations/${targetContactId}`)
+    revalidatePath("/relations/network")
     return { message: "Success" }
 }
 

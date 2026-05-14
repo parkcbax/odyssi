@@ -9,6 +9,8 @@ import { Mail, Phone, Calendar, User, Link2, Plus, MessageSquare } from "lucide-
 import Link from "next/link"
 import { ConnectionDialog } from "@/components/relations/connection-dialog"
 import { format } from "date-fns"
+import { deleteConnection } from "@/app/lib/relations-actions"
+import { Trash2 } from "lucide-react"
 
 export default async function ContactProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -113,6 +115,7 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
                                         targetId={conn.targetContact.id}
                                         type={conn.connectionType}
                                         isSource={true}
+                                        currentContactId={contact.id}
                                     />
                                 ))}
                                 {contact.targetConnections.map((conn) => (
@@ -122,6 +125,7 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
                                         targetId={conn.sourceContact.id}
                                         type={conn.connectionType}
                                         isSource={false}
+                                        currentContactId={contact.id}
                                     />
                                 ))}
                             </>
@@ -168,9 +172,12 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
     )
 }
 
-function ConnectionCard({ targetName, targetId, type, isSource }: { targetName: string, targetId: string, type: string, isSource: boolean }) {
+function ConnectionCard({ targetName, targetId, type, isSource, currentContactId }: { targetName: string, targetId: string, type: string, isSource: boolean, currentContactId: string }) {
+    const sourceId = isSource ? currentContactId : targetId
+    const destId = isSource ? targetId : currentContactId
+
     return (
-        <Card className="bg-card/50">
+        <Card className="bg-card/50 group">
             <CardContent className="p-3 flex items-center justify-between text-sm">
                 <div className="flex flex-col">
                     <Link href={`/relations/${targetId}`} className="font-medium hover:underline">
@@ -180,7 +187,20 @@ function ConnectionCard({ targetName, targetId, type, isSource }: { targetName: 
                         {isSource ? `is ${type}` : `(linked as: ${type})`}
                     </span>
                 </div>
-                <Link2 className="h-4 w-4 text-muted-foreground opacity-50" />
+                <div className="flex items-center gap-2">
+                    <form action={deleteConnection}>
+                        <input type="hidden" name="sourceContactId" value={sourceId} />
+                        <input type="hidden" name="targetContactId" value={destId} />
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </form>
+                    <Link2 className="h-4 w-4 text-muted-foreground opacity-30" />
+                </div>
             </CardContent>
         </Card>
     )

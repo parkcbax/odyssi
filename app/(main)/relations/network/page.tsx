@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { User, Network, ChevronDown, ChevronRight, Share2, Users, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { ConnectionDialog } from "@/components/relations/connection-dialog"
 
 export default function NetworkPage() {
     const [data, setData] = useState<any>(null)
@@ -201,6 +202,15 @@ function NetworkGraph({ data }: { data: any }) {
                                         {isCollapsed ? <Plus className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                                     </button>
                                 )}
+                                <ConnectionDialog sourceContactId={node.id} allContacts={data.contacts}>
+                                    <button 
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="absolute -bottom-1 -right-1 bg-green-600 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"
+                                        title="Add Connection"
+                                    >
+                                        <Plus className="h-3 w-3" />
+                                    </button>
+                                </ConnectionDialog>
                             </div>
                         </foreignObject>
                         
@@ -215,51 +225,49 @@ function NetworkGraph({ data }: { data: any }) {
 }
 
 function RelationTree({ data }: { data: any }) {
-    // 1. Sort contacts by total connections (Centrality)
-    const sortedContacts = [...data.contacts].sort((a, b) => {
-        const aCount = data.connections.filter((c: any) => c.sourceContactId === a.id || c.targetContactId === a.id).length
-        const bCount = data.connections.filter((c: any) => c.sourceContactId === b.id || c.targetContactId === b.id).length
-        return bCount - aCount
-    })
-
     const usedIds = new Set<string>()
     const tree: any[] = []
 
-    // 2. Build the tree structure by picking hubs and nesting their neighbors
-    sortedContacts.forEach(contact => {
-        if (usedIds.has(contact.id)) return
-
-        const node = { ...contact, children: [] as any[] }
+    // Sort contacts alphabetically to ensure a stable and predictable tree root order
+    const sortedContacts = [...data.contacts].sort((a, b) => a.fullName.localeCompare(b.fullName, 'th'))
+    
+    const buildNode = (contact: any): any => {
         usedIds.add(contact.id)
+        const node = { ...contact, children: [] as any[] }
         
-        // Find immediate neighbors for the first level
-        const neighbors = data.connections.filter((c: any) => c.sourceContactId === contact.id || c.targetContactId === contact.id)
+        // Find ALL connected people (bi-directional)
+        const links = data.connections.filter((c: any) => c.sourceContactId === contact.id || c.targetContactId === contact.id)
         
-        neighbors.forEach((conn: any) => {
-            const targetId = conn.sourceContactId === contact.id ? conn.targetContactId : conn.sourceContactId
-            if (!usedIds.has(targetId)) {
-                const targetContact = data.contacts.find((c: any) => c.id === targetId)
-                if (targetContact) {
-                    node.children.push({ ...targetContact, connectionType: conn.connectionType })
-                    usedIds.add(targetId)
+        links.forEach((conn: any) => {
+            const neighborId = conn.sourceContactId === contact.id ? conn.targetContactId : conn.sourceContactId
+            if (!usedIds.has(neighborId)) {
+                const neighbor = data.contacts.find((c: any) => c.id === neighborId)
+                if (neighbor) {
+                    node.children.push({ ...buildNode(neighbor), connectionType: conn.connectionType })
                 }
             }
         })
+        return node
+    }
 
-        tree.push(node)
+    // Build the forest
+    sortedContacts.forEach(contact => {
+        if (!usedIds.has(contact.id)) {
+            tree.push(buildNode(contact))
+        }
     })
 
     return (
         <div className="max-w-3xl mx-auto space-y-6 pb-20">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 bg-muted/50 p-3 rounded-lg">
                 <Share2 className="h-4 w-4" />
-                <span>Smart Hierarchy: Nested view of your social connections.</span>
+                <span>Smart Hierarchy: Bi-directional view of your social connections.</span>
             </div>
             
             <div className="space-y-4">
                 {tree.map(node => (
                     <div key={node.id} className="border rounded-xl bg-background shadow-sm overflow-hidden">
-                         <TreeNode node={node} />
+                         <TreeNode node={node} allContacts={data.contacts} />
                     </div>
                 ))}
             </div>
@@ -267,18 +275,22 @@ function RelationTree({ data }: { data: any }) {
     )
 }
 
-function TreeNode({ node, depth = 0 }: { node: any, depth?: number }) {
-    const [expanded, setExpanded] = useState(depth === 0)
+function TreeNode({ node, allContacts, depth = 0 }: { node: any, allContacts: any[], depth?: number }) {
+    const [expanded, setExpanded] = useState(true)
     const hasChildren = node.children && node.children.length > 0
 
     return (
         <div className="flex flex-col">
             <div 
                 className={cn(
-                    "flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors group",
-                    depth > 0 && "ml-8 border-l-2 border-primary/20 pl-6"
+                    "flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors group relative",
+                    depth > 0 && "ml-12 border-l-2 border-primary/20 pl-8"
                 )}
             >
+                {/* Visual indicator for nesting */}
+                {depth > 0 && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-[2px] bg-primary/20 -ml-8" />
+                )}
                 <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-background shadow-md bg-muted flex items-center justify-center shrink-0">
                     {node.profilePicture ? (
                         <img src={node.profilePicture} className="w-full h-full object-cover" />
@@ -299,22 +311,30 @@ function TreeNode({ node, depth = 0 }: { node: any, depth?: number }) {
                     </div>
                 </div>
                 
-                {hasChildren && (
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 px-2 gap-1 text-xs"
-                        onClick={() => setExpanded(!expanded)}
-                    >
-                        <Network className="h-3 w-3" />
-                        {node.children.length} relations
-                        {expanded ? <ChevronDown className="h-3 w-3 ml-1" /> : <ChevronRight className="h-3 w-3 ml-1" />}
-                    </Button>
-                )}
+                <div className="flex items-center gap-1">
+                    <ConnectionDialog sourceContactId={node.id} allContacts={allContacts}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-green-600 transition-colors" title="Add Connection">
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </ConnectionDialog>
+
+                    {hasChildren && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 px-2 gap-1 text-xs"
+                            onClick={() => setExpanded(!expanded)}
+                        >
+                            <Network className="h-3 w-3" />
+                            {node.children.length} relations
+                            {expanded ? <ChevronDown className="h-3 w-3 ml-1" /> : <ChevronRight className="h-3 w-3 ml-1" />}
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {expanded && hasChildren && (
-                <div className="bg-muted/5 pb-2">
+                <div className={cn("bg-muted/5 pb-2", depth > 0 && "ml-12 border-l-2 border-primary/20")}>
                     {node.children.map((child: any) => (
                         <div key={child.id} className="flex flex-col">
                             <div className="ml-16 py-1 flex items-center gap-2">
@@ -322,7 +342,7 @@ function TreeNode({ node, depth = 0 }: { node: any, depth?: number }) {
                                     {child.connectionType}
                                 </Badge>
                             </div>
-                            <TreeNode node={child} depth={depth + 1} />
+                            <TreeNode node={child} allContacts={allContacts} depth={depth + 1} />
                         </div>
                     ))}
                 </div>

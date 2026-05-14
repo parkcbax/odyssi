@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Contact } from "@prisma/client"
 import {
     Dialog,
@@ -47,6 +47,11 @@ export function ConnectionDialog({ sourceContactId, allContacts, children }: Con
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [customType, setCustomType] = useState("")
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -69,6 +74,8 @@ export function ConnectionDialog({ sourceContactId, allContacts, children }: Con
             toast.error(result.message || "Failed to create connection")
         }
     }
+
+    if (!mounted) return <>{children}</>
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
