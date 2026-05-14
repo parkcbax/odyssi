@@ -236,6 +236,58 @@ export async function deleteConnection(formData: FormData) {
     return { message: "Success" }
 }
 
+export async function swapConnection(formData: FormData) {
+    const session = await auth()
+    if (!session?.user?.id) return { message: "Unauthorized" }
+    const userId = session.user.id
+
+    const sourceId = formData.get("sourceContactId") as string
+    const targetId = formData.get("targetContactId") as string
+
+    if (!sourceId || !targetId) return { message: "Invalid IDs" }
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            // Get existing connection to preserve the type
+            const existing = await tx.connection.findUnique({
+                where: { sourceContactId_targetContactId: { sourceContactId: sourceId, targetContactId: targetId } }
+            })
+            if (!existing) return
+
+            // Check if the swapped version already exists!
+            const swappedExists = await tx.connection.findUnique({
+                where: { sourceContactId_targetContactId: { sourceContactId: targetId, targetContactId: sourceId } }
+            })
+
+            // Delete old
+            await tx.connection.delete({
+                where: { id: existing.id }
+            })
+
+            // Create new (swapped) only if it doesn't already exist
+            if (!swappedExists) {
+                await tx.connection.create({
+                    data: {
+                        userId,
+                        sourceContactId: targetId,
+                        targetContactId: sourceId,
+                        connectionType: existing.connectionType
+                    }
+                })
+            }
+        })
+    } catch (error) {
+        console.error("Failed to swap connection:", error)
+        return { message: "Database Error" }
+    }
+
+    revalidatePath("/relations")
+    revalidatePath(`/relations/${sourceId}`)
+    revalidatePath(`/relations/${targetId}`)
+    revalidatePath("/relations/network")
+    return { message: "Success" }
+}
+
 export async function getNetworkData() {
     const session = await auth()
     if (!session?.user?.id) throw new Error("Unauthorized")

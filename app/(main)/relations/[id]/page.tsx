@@ -5,12 +5,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, Phone, Calendar, User, Link2, Plus, MessageSquare, ExternalLink } from "lucide-react"
+import { Mail, Phone, Calendar, User, Link2, Plus, MessageSquare, ExternalLink, RefreshCw, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { ConnectionDialog } from "@/components/relations/connection-dialog"
 import { format } from "date-fns"
-import { deleteConnection } from "@/app/lib/relations-actions"
-import { Trash2 } from "lucide-react"
+import { deleteConnection, swapConnection } from "@/app/lib/relations-actions"
 
 export default async function ContactProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -188,12 +187,25 @@ function ConnectionCard({ targetName, targetId, type, isSource, currentContactId
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
+                    <form action={swapConnection}>
+                        <input type="hidden" name="sourceContactId" value={sourceId} />
+                        <input type="hidden" name="targetContactId" value={destId} />
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            title="Swap Direction"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                        </Button>
+                    </form>
                     <form action={deleteConnection}>
                         <input type="hidden" name="sourceContactId" value={sourceId} />
                         <input type="hidden" name="targetContactId" value={destId} />
                         <Button 
                             variant="ghost" 
                             size="icon" 
+                            title="Delete Connection"
                             className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                             <Trash2 className="h-4 w-4" />

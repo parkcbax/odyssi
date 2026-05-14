@@ -141,23 +141,61 @@ function NetworkGraph({ data }: { data: any }) {
     const toggleCollapse = (id: string, e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
+        
+        const descendants = new Set<string>()
+        const findDescendants = (nodeId: string) => {
+            const children = data.connections
+                .filter((c: any) => c.sourceContactId === nodeId)
+                .map((c: any) => c.targetContactId)
+            
+            children.forEach((childId: string) => {
+                if (!descendants.has(childId)) {
+                    descendants.add(childId)
+                    findDescendants(childId)
+                }
+            })
+        }
+        findDescendants(id)
+
         setCollapsedNodes(prev => {
             const next = new Set(prev)
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
+            const isCollapsing = !next.has(id)
+            
+            if (isCollapsing) {
+                next.add(id)
+                descendants.forEach(d => next.add(d))
+            } else {
+                next.delete(id)
+                descendants.forEach(d => next.delete(d))
+            }
             return next
         })
     }
 
     const visibleNodes = nodes.filter(n => {
-        if (!collapsedNodes.size) return true
-        // A node is hidden if it's connected to a collapsed node
-        const isNeighborOfCollapsed = data.connections.some((c: any) => 
-            (c.targetContactId === n.id && collapsedNodes.has(c.sourceContactId)) ||
-            (c.sourceContactId === n.id && collapsedNodes.has(c.targetContactId))
-        )
-        // BUT don't hide the collapsed node itself
-        return !isNeighborOfCollapsed || collapsedNodes.has(n.id)
+        let isHidden = false
+        const checkAncestorCollapsed = (nodeId: string, visited: Set<string>) => {
+            if (visited.has(nodeId)) return false
+            visited.add(nodeId)
+            
+            const parents = data.connections
+                .filter((c: any) => c.targetContactId === nodeId)
+                .map((c: any) => c.sourceContactId)
+                
+            for (const parentId of parents) {
+                if (collapsedNodes.has(parentId)) {
+                    isHidden = true
+                    return true
+                }
+                if (checkAncestorCollapsed(parentId, visited)) {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        checkAncestorCollapsed(n.id, new Set())
+        return !isHidden
     })
 
     const visibleEdges = data.connections.filter((conn: any) => {
@@ -252,9 +290,20 @@ function RelationTree({ data }: { data: any }) {
     const usedIds = new Set<string>()
     const tree: any[] = []
 
-    // Sort contacts alphabetically to ensure a stable and predictable tree root order
-    const sortedContacts = [...data.contacts].sort((a, b) => a.fullName.localeCompare(b.fullName, 'th'))
-    
+    // Sort contacts to find true roots: prioritize nodes with 0 incoming connections and high outgoing connections.
+    // If there's a tie, fall back to alphabetical order.
+    const sortedContacts = [...data.contacts].sort((a, b) => {
+        const aIn = data.connections.filter((c: any) => c.targetContactId === a.id).length
+        const bIn = data.connections.filter((c: any) => c.targetContactId === b.id).length
+        if (aIn !== bIn) return aIn - bIn // Lower incoming connections first
+
+        const aOut = data.connections.filter((c: any) => c.sourceContactId === a.id).length
+        const bOut = data.connections.filter((c: any) => c.sourceContactId === b.id).length
+        if (aOut !== bOut) return bOut - aOut // Higher outgoing connections first
+
+        return a.fullName.localeCompare(b.fullName, 'th')
+    })
+
     const buildNode = (contact: any): any => {
         usedIds.add(contact.id)
         const node = { ...contact, children: [] as any[] }
