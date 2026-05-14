@@ -386,11 +386,17 @@ export async function POST(req: NextRequest) {
                         await tx.journal.deleteMany({ where: { userId: { in: validUserIds } } });
                         await tx.tag.deleteMany({ where: { userId: { in: validUserIds } } });
                         await tx.blogPost.deleteMany({ where: { authorId: { in: validUserIds } } });
+                        await tx.connection.deleteMany({ where: { userId: { in: validUserIds } } });
+                        await tx.contact.deleteMany({ where: { userId: { in: validUserIds } } });
+                        await tx.group.deleteMany({ where: { userId: { in: validUserIds } } });
                     }
                 } else {
                     await tx.journal.deleteMany({ where: { userId: currentUserId } });
                     await tx.tag.deleteMany({ where: { userId: currentUserId } });
                     await tx.blogPost.deleteMany({ where: { authorId: currentUserId } });
+                    await tx.connection.deleteMany({ where: { userId: currentUserId } });
+                    await tx.contact.deleteMany({ where: { userId: currentUserId } });
+                    await tx.group.deleteMany({ where: { userId: currentUserId } });
                 }
 
                 // Streaming Tags
@@ -472,6 +478,19 @@ export async function POST(req: NextRequest) {
                                         console.error("Failed to connect tags for entry", createdEntry.id, err);
                                     }
                                 }
+
+                                 if (e.contacts && e.contacts.length > 0) {
+                                    try {
+                                        await tx.entry.update({
+                                            where: { id: createdEntry.id },
+                                            data: {
+                                                contacts: { connect: e.contacts.map((c: any) => ({ id: c.id })) }
+                                            }
+                                        });
+                                    } catch (err) {
+                                        console.error("Failed to connect contacts for entry", createdEntry.id, err);
+                                    }
+                                }
                             } catch (err) {
                                 console.error(`Failed to restore entry: ${e?.title}`, err);
                                 try {
@@ -513,7 +532,6 @@ export async function POST(req: NextRequest) {
                         }
                     });
                 });
-
                 // Top level Config Restoration
                 const appConfig = await extractObject(dataJsonPath, "appConfig");
                 if (appConfig) {
@@ -546,6 +564,58 @@ export async function POST(req: NextRequest) {
                         });
                     }
                 }
+
+                // RELATION MANAGER RESTORATION
+                // 1. Restore Groups (Top level first if possible, but SetNull on parentId helps)
+                await processStreamArray(dataJsonPath, "groups", async (g) => {
+                    const targetUserId = (isUserAdmin && g.userId) ? getValidUserId(g.userId) : currentUserId;
+                    await tx.group.create({
+                        data: {
+                            id: g.id,
+                            name: g.name,
+                            description: g.description,
+                            parentId: g.parentId, // Might be null or ID
+                            userId: targetUserId,
+                            createdAt: parseDate(g.createdAt),
+                            updatedAt: parseDate(g.updatedAt)
+                        }
+                    });
+                });
+
+                // 2. Restore Contacts
+                await processStreamArray(dataJsonPath, "contacts", async (c) => {
+                    const targetUserId = (isUserAdmin && c.userId) ? getValidUserId(c.userId) : currentUserId;
+                    await tx.contact.create({
+                        data: {
+                            id: c.id,
+                            fullName: c.fullName,
+                            profilePicture: c.profilePicture,
+                            email: c.email,
+                            phoneNumber: c.phoneNumber,
+                            notes: c.notes,
+                            groupId: c.groupId,
+                            userId: targetUserId,
+                            createdAt: parseDate(c.createdAt),
+                            updatedAt: parseDate(c.updatedAt)
+                        }
+                    });
+                });
+
+                // 3. Restore Connections
+                await processStreamArray(dataJsonPath, "connections", async (conn) => {
+                    const targetUserId = (isUserAdmin && conn.userId) ? getValidUserId(conn.userId) : currentUserId;
+                    await tx.connection.create({
+                        data: {
+                            id: conn.id,
+                            sourceContactId: conn.sourceContactId,
+                            targetContactId: conn.targetContactId,
+                            connectionType: conn.connectionType,
+                            userId: targetUserId,
+                            createdAt: parseDate(conn.createdAt),
+                            updatedAt: parseDate(conn.updatedAt)
+                        }
+                    });
+                });
 
             } else if (dataType === "JOURNAL") {
                 // Streaming Individual Context Journals securely
@@ -639,6 +709,19 @@ export async function POST(req: NextRequest) {
                                         });
                                     } catch (err) {
                                         console.error("Failed to connect tags for entry", createdEntry.id, err);
+                                    }
+                                }
+
+                                if (e.contacts && e.contacts.length > 0) {
+                                    try {
+                                        await tx.entry.update({
+                                            where: { id: createdEntry.id },
+                                            data: {
+                                                contacts: { connect: e.contacts.map((c: any) => ({ id: c.id })) }
+                                            }
+                                        });
+                                    } catch (err) {
+                                        console.error("Failed to connect contacts for entry", createdEntry.id, err);
                                     }
                                 }
                             } catch (err) {

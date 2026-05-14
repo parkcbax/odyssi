@@ -119,7 +119,7 @@ export async function generateBackup(options: BackupOptions) {
             while (true) {
                 const batch = await prisma.entry.findMany({
                     where: { journalId: j.id },
-                    include: { tags: true, images: true },
+                    include: { tags: true, images: true, contacts: { select: { id: true } } },
                     skip, take: BATCH_SIZE,
                     orderBy: { createdAt: 'asc' }
                 })
@@ -185,6 +185,20 @@ export async function generateBackup(options: BackupOptions) {
             if (appConfig) {
                 await writeStream(`,"appConfig":${JSON.stringify(appConfig)}`)
             }
+
+            // RELATION MANAGER DATA
+            // Groups
+            const groups = await prisma.group.findMany({ where: whereUser })
+            await writeStream(`,"groups":${JSON.stringify(groups)}`)
+
+            // Contacts
+            const contacts = await prisma.contact.findMany({ where: whereUser })
+            await writeStream(`,"contacts":${JSON.stringify(contacts)}`)
+            contacts.forEach(c => { if (c.profilePicture) mediaToAdd.add(c.profilePicture) })
+
+            // Connections
+            const connections = await prisma.connection.findMany({ where: whereUser })
+            await writeStream(`,"connections":${JSON.stringify(connections)}`)
         }
 
         // Close global JSON and properly end stream to signal Archiver to move on
