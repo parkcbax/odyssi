@@ -119,19 +119,11 @@ function NetworkGraph({ data, zoom, offset, setOffset, onZoom }: { data: any, zo
         const processedNodes: any[] = []
         const usedIds = new Set<string>()
 
-        // 1. Identify main root
-        const roots = contacts
-            .sort((a: any, b: any) => {
-                const aCount = connections.filter((conn: any) => conn.sourceContactId === a.id || conn.targetContactId === a.id).length
-                const bCount = connections.filter((conn: any) => conn.sourceContactId === b.id || conn.targetContactId === b.id).length
-                return bCount - aCount
-            })
-            .slice(0, 1)
-
+        // DFS Traversal to assign initial tree-like layout and depth levels
         const layoutNode = (entity: any, x: number, y: number, incomingAngle: number | null, depth: number) => {
             if (usedIds.has(entity.id)) return
             usedIds.add(entity.id)
-            processedNodes.push({ ...entity, x, y })
+            processedNodes.push({ ...entity, x, y, depth })
 
             const children = connections
                 .filter((c: any) => c.sourceContactId === entity.id || c.targetContactId === entity.id)
@@ -159,47 +151,256 @@ function NetworkGraph({ data, zoom, offset, setOffset, onZoom }: { data: any, zo
             })
         }
 
-        if (roots.length > 0) {
-            layoutNode(roots[0], centerX, centerY, null, 0)
-        }
+        // Identify all potential roots, sorted by connectivity descending
+        const sortedRoots = [...contacts].sort((a: any, b: any) => {
+            const aCount = connections.filter((conn: any) => conn.sourceContactId === a.id || conn.targetContactId === a.id).length
+            const bCount = connections.filter((conn: any) => conn.sourceContactId === b.id || conn.targetContactId === b.id).length
+            return bCount - aCount
+        })
 
-        // Handle stragglers
-        contacts.forEach(c => {
-            if (!usedIds.has(c.id)) {
-                const angle = Math.random() * Math.PI * 2
-                processedNodes.push({ ...c, x: centerX + Math.cos(angle) * 500, y: centerY + Math.sin(angle) * 500 })
-                usedIds.add(c.id)
+        // Run DFS on all components to build beautiful trees
+        sortedRoots.forEach((rootContact) => {
+            if (!rootContact) return
+            if (!usedIds.has(rootContact.id)) {
+                if (usedIds.size === 0) {
+                    // Main central root/hub
+                    layoutNode(rootContact, centerX, centerY, null, 0)
+                } else {
+                    // Secondary component root
+                    const angle = (usedIds.size * 1.5) % (Math.PI * 2)
+                    const rx = centerX + Math.cos(angle) * 450
+                    const ry = centerY + Math.sin(angle) * 450
+                    layoutNode(rootContact, rx, ry, angle, 1)
+                }
             }
         })
 
-        // COLLISION PREVENTION: Push overlapping nodes apart (even from different parents)
-        const minDistance = 140 
-        for (let iter = 0; iter < 15; iter++) {
-            for (let i = 0; i < processedNodes.length; i++) {
-                for (let j = i + 1; j < processedNodes.length; j++) {
-                    const n1 = processedNodes[i]
-                    const n2 = processedNodes[j]
-                    
-                    const dx = n2.x - n1.x
-                    const dy = n2.y - n1.y
-                    const distance = Math.sqrt(dx * dx + dy * dy)
-                    
-                    if (distance < minDistance && distance > 0) {
-                        const overlap = minDistance - distance
-                        const force = (overlap / distance) * 0.5
-                        const moveX = dx * force
-                        const moveY = dy * force
+        // CONSTRAINED FORCE-DIRECTED SIMULATION WITH SIMULATED ANNEALING & GEOMETRIC UNTANGLING
+        // Run a three-stage layout solver:
+        // 1. Initial relaxation with soft annealing to let nodes move freely (180 iterations).
+        // 2. Segment intersection check to detect and untangle crossing connection lines (up to 8 passes).
+        // 3. Final settling relaxation with high damping to lock nodes into clean, overlap-free positions (50 iterations).
+        const simulatedNodes = processedNodes.map(node => ({
+            ...node,
+            vx: 0,
+            vy: 0
+        }))
+
+        const R_SPACING = 240 // Concentric ring distance
+        const kAttractive = 0.15 // Strength of connection springs
+        const kRepulsiveBase = 65000 // Repulsion between all nodes
+        const kRadial = 0.35 // Restoring force to stay on hierarchical concentric ring
+        const kAngularRepel = 12.0 // Strength of angular repulsion to prevent same-direction stack
+        const minAngularGap = 0.32 // Minimum angle separation (approx 18 degrees)
+        const damping = 0.80 // Damping to prevent oscillation
+
+        const applyForces = (nodesList: any[], repScale: number) => {
+            const kRepulsive = kRepulsiveBase * repScale;
+            
+            // 1. Repulsive forces to avoid overlaps
+            for (let i = 0; i < nodesList.length; i++) {
+                const n1 = nodesList[i];
+                for (let j = i + 1; j < nodesList.length; j++) {
+                    const n2 = nodesList[j];
+                    const dx = n2.x - n1.x;
+                    const dy = n2.y - n1.y;
+                    const distSqr = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSqr) || 0.001;
+
+                    if (dist < 450) {
+                        let force = kRepulsive / (dist * dist);
                         
-                        n1.x -= moveX
-                        n1.y -= moveY
-                        n2.x += moveX
-                        n2.y += moveY
+                        // Extra push force for near nodes to strictly avoid overlap
+                        if (dist < 150) {
+                            force += (150 - dist) * 2.5 * repScale;
+                        }
+                        
+                        const fx = (dx / dist) * force;
+                        const fy = (dy / dist) * force;
+
+                        n1.vx -= fx;
+                        n1.vy -= fy;
+                        n2.vx += fx;
+                        n2.vy += fy;
                     }
                 }
             }
+
+            // 2. Attractive spring forces between connected nodes
+            connections.forEach((conn: any) => {
+                const n1 = nodesList.find(n => n.id === conn.sourceContactId);
+                const n2 = nodesList.find(n => n.id === conn.targetContactId);
+                if (n1 && n2) {
+                    const dx = n2.x - n1.x;
+                    const dy = n2.y - n1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+
+                    const targetDist = 180;
+                    const delta = dist - targetDist;
+                    const force = kAttractive * delta;
+
+                    const fx = (dx / dist) * force;
+                    const fy = (dy / dist) * force;
+
+                    n1.vx += fx;
+                    n1.vy += fy;
+                    n2.vx -= fx;
+                    n2.vy -= fy;
+                }
+            });
+
+            // 3. Angular Repulsion Force (prevent same-direction stacks)
+            for (let i = 0; i < nodesList.length; i++) {
+                const n1 = nodesList[i];
+                if (n1.depth === 0) continue;
+                
+                const dx1 = n1.x - centerX;
+                const dy1 = n1.y - centerY;
+                const a1 = Math.atan2(dy1, dx1);
+
+                for (let j = i + 1; j < nodesList.length; j++) {
+                    const n2 = nodesList[j];
+                    if (n2.depth === 0) continue;
+
+                    const isConnectedDirectly = connections.some((c: any) => 
+                        (c.sourceContactId === n1.id && c.targetContactId === n2.id) ||
+                        (c.sourceContactId === n2.id && c.targetContactId === n1.id)
+                    );
+
+                    if (!isConnectedDirectly) {
+                        const dx2 = n2.x - centerX;
+                        const dy2 = n2.y - centerY;
+                        const a2 = Math.atan2(dy2, dx2);
+
+                        let da = a2 - a1;
+                        while (da > Math.PI) da -= Math.PI * 2;
+                        while (da < -Math.PI) da += Math.PI * 2;
+
+                        const absDa = Math.abs(da);
+                        if (absDa < minAngularGap && absDa > 0) {
+                            const force = kAngularRepel * (minAngularGap - absDa) * repScale;
+                            const dir = da > 0 ? 1 : -1;
+                            
+                            const perpX1 = -Math.sin(a1);
+                            const perpY1 = Math.cos(a1);
+                            const perpX2 = -Math.sin(a2);
+                            const perpY2 = Math.cos(a2);
+
+                            n1.vx -= perpX1 * force * dir;
+                            n1.vy -= perpY1 * force * dir;
+                            n2.vx += perpX2 * force * dir;
+                            n2.vy += perpY2 * force * dir;
+                        }
+                    }
+                }
+            }
+
+            // 4. Concentric Radial Ring Force
+            nodesList.forEach(node => {
+                const dx = node.x - centerX;
+                const dy = node.y - centerY;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+
+                const targetRadius = node.depth * R_SPACING;
+                const radialDelta = dist - targetRadius;
+                
+                const fxRadial = (dx / dist) * radialDelta * kRadial;
+                const fyRadial = (dy / dist) * radialDelta * kRadial;
+                
+                node.vx -= fxRadial;
+                node.vy -= fyRadial;
+
+                if (node.depth === 0) {
+                    node.vx -= dx * 0.5;
+                    node.vy -= dy * 0.5;
+                }
+            });
+
+            // 5. Update positions and damp velocities
+            nodesList.forEach(node => {
+                const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
+                const maxSpeed = 30;
+                if (speed > maxSpeed) {
+                    node.vx = (node.vx / speed) * maxSpeed;
+                    node.vy = (node.vy / speed) * maxSpeed;
+                }
+
+                node.x += node.vx;
+                node.y += node.vy;
+
+                node.vx *= damping;
+                node.vy *= damping;
+            });
+        };
+
+        // Phase 1: Main Relaxation with Simulated Annealing (180 iterations)
+        for (let iter = 0; iter < 180; iter++) {
+            let annealingFactor = 1.0;
+            if (iter < 50) {
+                annealingFactor = 0.15;
+            } else if (iter < 110) {
+                annealingFactor = 0.15 + (0.85 * (iter - 50) / 60);
+            }
+            applyForces(simulatedNodes, annealingFactor);
         }
 
-        setNodes(processedNodes)
+        // Phase 2: Segment Intersection Untangler (Topology Sweep)
+        // Detects any crossing connection lines and swaps sibling node positions to untangle them.
+        const ccw = (a: any, b: any, c: any) => {
+            return (c.y - a.y) * (b.x - a.x) > (b.y - a.y) * (c.x - a.x);
+        };
+        const intersects = (p1: any, p2: any, p3: any, p4: any) => {
+            return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
+        };
+
+        for (let pass = 0; pass < 8; pass++) {
+            let swapped = false;
+            for (let i = 0; i < connections.length; i++) {
+                const c1 = connections[i];
+                const u1 = simulatedNodes.find(n => n.id === c1.sourceContactId);
+                const v1 = simulatedNodes.find(n => n.id === c1.targetContactId);
+                if (!u1 || !v1) continue;
+
+                for (let j = i + 1; j < connections.length; j++) {
+                    const c2 = connections[j];
+                    const u2 = simulatedNodes.find(n => n.id === c2.sourceContactId);
+                    const v2 = simulatedNodes.find(n => n.id === c2.targetContactId);
+                    if (!u2 || !v2) continue;
+
+                    // Skip if they share a node
+                    if (u1.id === u2.id || u1.id === v2.id || v1.id === u2.id || v1.id === v2.id) continue;
+
+                    if (intersects(u1, v1, u2, v2)) {
+                        // Swap endpoints if they are at the same depth level
+                        if (v1.depth === v2.depth) {
+                            const tempX = v1.x;
+                            const tempY = v1.y;
+                            v1.x = v2.x;
+                            v1.y = v2.y;
+                            v2.x = tempX;
+                            v2.y = tempY;
+                            swapped = true;
+                        } else if (u1.depth === u2.depth) {
+                            const tempX = u1.x;
+                            const tempY = u1.y;
+                            u1.x = u2.x;
+                            u1.y = u2.y;
+                            u2.x = tempX;
+                            u2.y = tempY;
+                            swapped = true;
+                        }
+                    }
+                }
+            }
+            if (!swapped) break;
+        }
+
+        // Phase 3: Final Settling Relaxation (50 iterations)
+        for (let iter = 0; iter < 50; iter++) {
+            applyForces(simulatedNodes, 1.0);
+        }
+
+        setNodes(simulatedNodes)
     }, [data])
 
     const handleMouseDown = (e: React.MouseEvent) => {
