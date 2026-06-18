@@ -176,8 +176,15 @@ model AppConfig {
   lastAutoBackupAt    DateTime?
   
   // Multi-User Settings
-  // Multi-User Settings
   enableMultiUser     Boolean @default(false)
   enableUserBlogging Boolean @default(false)
   analyticSnippet   String?  @default("")
+
+  // UI Settings (dynamic theme config)
+  themeFont           String  @default("inter")
+  themeBlogFont       String  @default("inter")
+  themeBlogSize       String  @default("medium")
+  themeCodeFont       String  @default("geist")
+  themeAccent         String  @default("sage")
+  themeCustomAccent   String  @default("#768882")
 }

@@ -1,13 +1,17 @@
 "use client"
 
 import { useTheme } from "next-themes"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useActionState } from "react"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Laptop, Moon, Sun } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { updateUISettings } from "@/app/lib/actions"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
 
 const ACCENT_COLORS = [
     { name: "sage", color: "#768882", label: "Sage Green" },
@@ -21,72 +25,52 @@ const ACCENT_COLORS = [
 
 interface UISettingsFormProps {
     enableBlogging?: boolean
+    appConfig?: any
 }
 
-export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
+export function UISettingsForm({ enableBlogging, appConfig }: UISettingsFormProps) {
+    const [state, formAction, isPending] = useActionState(updateUISettings, null)
+    const router = useRouter()
+
     const { theme, setTheme } = useTheme()
-    const [font, setFont] = useState("inter")
-    const [blogFont, setBlogFont] = useState("inter")
-    const [blogSize, setBlogSize] = useState("medium")
-    const [codeFont, setCodeFont] = useState("geist")
-    const [accent, setAccent] = useState("sage")
-    const [customColor, setCustomColor] = useState("#768882")
+    const [font, setFont] = useState(appConfig?.themeFont || "inter")
+    const [blogFont, setBlogFont] = useState(appConfig?.themeBlogFont || "inter")
+    const [blogSize, setBlogSize] = useState(appConfig?.themeBlogSize || "medium")
+    const [codeFont, setCodeFont] = useState(appConfig?.themeCodeFont || "geist")
+    const [accent, setAccent] = useState(appConfig?.themeAccent || "sage")
+    const [customColor, setCustomColor] = useState(appConfig?.themeCustomAccent || "#768882")
 
     useEffect(() => {
-        const savedFont = localStorage.getItem("odyssi-font") || "inter"
-        setFont(savedFont)
-        document.documentElement.setAttribute("data-font", savedFont)
-
-        const savedBlogFont = localStorage.getItem("odyssi-blog-font") || "inter"
-        setBlogFont(savedBlogFont)
-        document.documentElement.setAttribute("data-blog-font", savedBlogFont)
-
-        const savedBlogSize = localStorage.getItem("odyssi-blog-size") || "medium"
-        setBlogSize(savedBlogSize)
-        document.documentElement.setAttribute("data-blog-size", savedBlogSize)
-
-        const savedCodeFont = localStorage.getItem("odyssi-code-font") || "geist"
-        setCodeFont(savedCodeFont)
-        document.documentElement.setAttribute("data-code-font", savedCodeFont)
-
-        const savedAccent = localStorage.getItem("odyssi-accent") || "sage"
-        setAccent(savedAccent)
-        document.documentElement.setAttribute("data-accent", savedAccent)
-
-        const savedCustomColor = localStorage.getItem("odyssi-custom-accent") || "#768882"
-        setCustomColor(savedCustomColor)
-        if (savedAccent === "custom") {
-            document.documentElement.style.setProperty("--custom-primary", savedCustomColor)
+        if (state?.message === "Success") {
+            toast.success("UI settings updated successfully")
+            router.refresh()
+        } else if (state?.message) {
+            toast.error(state.message)
         }
-    }, [])
+    }, [state, router])
 
     const handleFontChange = (value: string) => {
         setFont(value)
-        localStorage.setItem("odyssi-font", value)
         document.documentElement.setAttribute("data-font", value)
     }
 
     const handleBlogFontChange = (value: string) => {
         setBlogFont(value)
-        localStorage.setItem("odyssi-blog-font", value)
         document.documentElement.setAttribute("data-blog-font", value)
     }
 
     const handleBlogSizeChange = (value: string) => {
         setBlogSize(value)
-        localStorage.setItem("odyssi-blog-size", value)
         document.documentElement.setAttribute("data-blog-size", value)
     }
 
     const handleCodeFontChange = (value: string) => {
         setCodeFont(value)
-        localStorage.setItem("odyssi-code-font", value)
         document.documentElement.setAttribute("data-code-font", value)
     }
 
     const handleAccentChange = (value: string) => {
         setAccent(value)
-        localStorage.setItem("odyssi-accent", value)
         document.documentElement.setAttribute("data-accent", value)
         if (value === "custom") {
             document.documentElement.style.setProperty("--custom-primary", customColor)
@@ -101,14 +85,19 @@ export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
             cleanVal = "#" + cleanVal
         }
         setCustomColor(cleanVal)
-        localStorage.setItem("odyssi-custom-accent", cleanVal)
         if (accent === "custom") {
             document.documentElement.style.setProperty("--custom-primary", cleanVal)
         }
     }
 
     return (
-        <div className="space-y-6">
+        <form action={formAction} className="space-y-6">
+            <input type="hidden" name="font" value={font} />
+            <input type="hidden" name="blogFont" value={blogFont} />
+            <input type="hidden" name="blogSize" value={blogSize} />
+            <input type="hidden" name="codeFont" value={codeFont} />
+            <input type="hidden" name="accent" value={accent} />
+            <input type="hidden" name="customAccent" value={customColor} />
             <Card>
                 <CardHeader>
                     <CardTitle>Theme</CardTitle>
@@ -343,6 +332,12 @@ export function UISettingsForm({ enableBlogging }: UISettingsFormProps) {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+
+            <div className="flex justify-start pt-2">
+                <Button type="submit" disabled={isPending} className="min-w-[150px]">
+                    {isPending ? "Saving..." : "Save Changes"}
+                </Button>
+            </div>
+        </form>
     )
 }

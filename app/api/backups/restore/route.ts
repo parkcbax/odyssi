@@ -546,7 +546,13 @@ export async function POST(req: NextRequest) {
                                 autoBackupInterval: appConfig.autoBackupInterval,
                                 enableMultiUser: appConfig.enableMultiUser,
                                 enableUserBlogging: appConfig.enableUserBlogging,
-                                analyticSnippet: appConfig.analyticSnippet
+                                analyticSnippet: appConfig.analyticSnippet,
+                                themeFont: appConfig.themeFont ?? undefined,
+                                themeBlogFont: appConfig.themeBlogFont ?? undefined,
+                                themeBlogSize: appConfig.themeBlogSize ?? undefined,
+                                themeCodeFont: appConfig.themeCodeFont ?? undefined,
+                                themeAccent: appConfig.themeAccent ?? undefined,
+                                themeCustomAccent: appConfig.themeCustomAccent ?? undefined
                             }
                         });
                     } else {
@@ -559,7 +565,13 @@ export async function POST(req: NextRequest) {
                                 autoBackupInterval: appConfig.autoBackupInterval,
                                 enableMultiUser: appConfig.enableMultiUser,
                                 enableUserBlogging: appConfig.enableUserBlogging,
-                                analyticSnippet: appConfig.analyticSnippet
+                                analyticSnippet: appConfig.analyticSnippet,
+                                themeFont: appConfig.themeFont ?? undefined,
+                                themeBlogFont: appConfig.themeBlogFont ?? undefined,
+                                themeBlogSize: appConfig.themeBlogSize ?? undefined,
+                                themeCodeFont: appConfig.themeCodeFont ?? undefined,
+                                themeAccent: appConfig.themeAccent ?? undefined,
+                                themeCustomAccent: appConfig.themeCustomAccent ?? undefined
                             }
                         });
                     }

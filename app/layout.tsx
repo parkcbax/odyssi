@@ -70,7 +70,21 @@ export default async function RootLayout({
   const config = await getAppConfig();
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${kanit.variable} ${prompt.variable} ${roboto.variable} ${lora.variable}`} suppressHydrationWarning>
+    <html 
+      lang="en" 
+      className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${kanit.variable} ${prompt.variable} ${roboto.variable} ${lora.variable}`} 
+      data-font={config?.themeFont || "inter"}
+      data-blog-font={config?.themeBlogFont || "inter"}
+      data-blog-size={config?.themeBlogSize || "medium"}
+      data-code-font={config?.themeCodeFont || "geist"}
+      data-accent={config?.themeAccent || "sage"}
+      style={
+        config?.themeAccent === "custom"
+          ? ({ "--custom-primary": config?.themeCustomAccent || "#768882" } as React.CSSProperties)
+          : undefined
+      }
+      suppressHydrationWarning
+    >
       <head>
         {!!config?.analyticSnippet && (
           <AnalyticsInjector snippet={config.analyticSnippet} />

@@ -100,7 +100,7 @@ export function SettingsClient({ user, journals, appConfig, isUserAdmin }: Setti
                 {isUserAdmin && (
                     <>
                         <TabsContent value="ui" className="space-y-6">
-                            <UISettingsForm enableBlogging={appConfig.enableBlogging} />
+                            <UISettingsForm enableBlogging={appConfig.enableBlogging} appConfig={appConfig} />
                         </TabsContent>
 
                         <TabsContent value="additional" className="space-y-6">

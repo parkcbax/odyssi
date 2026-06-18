@@ -480,7 +480,13 @@ export async function getAppConfig() {
                     enableMultiUser: false,
                     enableUserBlogging: false,
                     autoBackupInterval: "1Week",
-                    analyticSnippet: ""
+                    analyticSnippet: "",
+                    themeFont: "inter",
+                    themeBlogFont: "inter",
+                    themeBlogSize: "medium",
+                    themeCodeFont: "geist",
+                    themeAccent: "sage",
+                    themeCustomAccent: "#768882"
                 }
             })
         }
@@ -488,6 +494,60 @@ export async function getAppConfig() {
     } catch (error) {
         console.warn("Could not fetch app config (database might be unavailable):", error)
         return null
+    }
+}
+
+export async function updateUISettings(prevState: any, formData: FormData) {
+    const session = await auth()
+    if (!session?.user?.id) return { message: "Unauthorized" }
+
+    const font = formData.get("font") as string || "inter"
+    const blogFont = formData.get("blogFont") as string || "inter"
+    const blogSize = formData.get("blogSize") as string || "medium"
+    const codeFont = formData.get("codeFont") as string || "geist"
+    const accent = formData.get("accent") as string || "sage"
+    const customAccent = formData.get("customAccent") as string || "#768882"
+
+    try {
+        const config = await prisma.appConfig.findFirst()
+        const id = config?.id
+
+        if (id) {
+            await prisma.appConfig.update({
+                where: { id },
+                data: {
+                    themeFont: font,
+                    themeBlogFont: blogFont,
+                    themeBlogSize: blogSize,
+                    themeCodeFont: codeFont,
+                    themeAccent: accent,
+                    themeCustomAccent: customAccent
+                }
+            })
+        } else {
+            await prisma.appConfig.create({
+                data: {
+                    themeFont: font,
+                    themeBlogFont: blogFont,
+                    themeBlogSize: blogSize,
+                    themeCodeFont: codeFont,
+                    themeAccent: accent,
+                    themeCustomAccent: customAccent,
+                    redirectHomeToLogin: false,
+                    enableBlogging: false,
+                    enableMultiUser: false,
+                    enableUserBlogging: false,
+                    autoBackupInterval: "1Week",
+                    analyticSnippet: ""
+                }
+            })
+        }
+
+        revalidatePath("/", "layout")
+        return { message: "Success" }
+    } catch (error) {
+        console.error("Failed to update UI settings:", error)
+        return { message: "Database Error" }
     }
 }
 
