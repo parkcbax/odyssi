@@ -35,7 +35,7 @@ export function PromptCard() {
                 </CardDescription>
             </CardHeader>
             <CardFooter className="relative z-10 border-t bg-muted/30 py-4">
-                <Button className="w-full sm:w-auto font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-0.5" asChild size="lg">
+                <Button className="w-full sm:w-auto font-semibold transition-all" asChild size="lg">
                     <Link href="/entries/new">
                         Reflect Now
                     </Link>

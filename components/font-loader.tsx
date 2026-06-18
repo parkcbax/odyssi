@@ -15,6 +15,9 @@ export function FontLoader() {
 
         const savedCodeFont = localStorage.getItem("odyssi-code-font") || "geist"
         document.documentElement.setAttribute("data-code-font", savedCodeFont)
+
+        const savedAccent = localStorage.getItem("odyssi-accent") || "sage"
+        document.documentElement.setAttribute("data-accent", savedAccent)
     }, [])
 
     return null
