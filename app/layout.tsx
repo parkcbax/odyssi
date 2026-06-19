@@ -69,6 +69,14 @@ export default async function RootLayout({
 }>) {
   const config = await getAppConfig();
 
+  const htmlStyles: React.CSSProperties = {};
+  if (config?.themeAccent === "custom") {
+    htmlStyles["--custom-primary" as any] = config?.themeCustomAccent || "#768882";
+  }
+  if (config?.themeBg === "custom") {
+    htmlStyles["--custom-background" as any] = config?.themeCustomBg || "#ffffff";
+  }
+
   return (
     <html 
       lang="en" 
@@ -78,11 +86,8 @@ export default async function RootLayout({
       data-blog-size={config?.themeBlogSize || "medium"}
       data-code-font={config?.themeCodeFont || "geist"}
       data-accent={config?.themeAccent || "sage"}
-      style={
-        config?.themeAccent === "custom"
-          ? ({ "--custom-primary": config?.themeCustomAccent || "#768882" } as React.CSSProperties)
-          : undefined
-      }
+      data-bg={config?.themeBg || "white"}
+      style={Object.keys(htmlStyles).length > 0 ? htmlStyles : undefined}
       suppressHydrationWarning
     >
       <head>
@@ -90,7 +95,7 @@ export default async function RootLayout({
           <AnalyticsInjector snippet={config.analyticSnippet} />
         )}
       </head>
-      <body className="antialiased">
+      <body className="antialiased bg-background text-foreground">
         <FontLoader />
         <Providers>
           <ThemeProvider

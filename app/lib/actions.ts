@@ -486,7 +486,9 @@ export async function getAppConfig() {
                     themeBlogSize: "medium",
                     themeCodeFont: "geist",
                     themeAccent: "sage",
-                    themeCustomAccent: "#768882"
+                    themeCustomAccent: "#768882",
+                    themeBg: "white",
+                    themeCustomBg: "#ffffff"
                 }
             })
         }
@@ -507,6 +509,8 @@ export async function updateUISettings(prevState: any, formData: FormData) {
     const codeFont = formData.get("codeFont") as string || "geist"
     const accent = formData.get("accent") as string || "sage"
     const customAccent = formData.get("customAccent") as string || "#768882"
+    const bg = formData.get("bg") as string || "white"
+    const customBg = formData.get("customBg") as string || "#ffffff"
 
     try {
         const config = await prisma.appConfig.findFirst()
@@ -521,7 +525,9 @@ export async function updateUISettings(prevState: any, formData: FormData) {
                     themeBlogSize: blogSize,
                     themeCodeFont: codeFont,
                     themeAccent: accent,
-                    themeCustomAccent: customAccent
+                    themeCustomAccent: customAccent,
+                    themeBg: bg,
+                    themeCustomBg: customBg
                 }
             })
         } else {
@@ -533,6 +539,8 @@ export async function updateUISettings(prevState: any, formData: FormData) {
                     themeCodeFont: codeFont,
                     themeAccent: accent,
                     themeCustomAccent: customAccent,
+                    themeBg: bg,
+                    themeCustomBg: customBg,
                     redirectHomeToLogin: false,
                     enableBlogging: false,
                     enableMultiUser: false,

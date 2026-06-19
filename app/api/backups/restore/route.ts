@@ -552,7 +552,9 @@ export async function POST(req: NextRequest) {
                                 themeBlogSize: appConfig.themeBlogSize ?? undefined,
                                 themeCodeFont: appConfig.themeCodeFont ?? undefined,
                                 themeAccent: appConfig.themeAccent ?? undefined,
-                                themeCustomAccent: appConfig.themeCustomAccent ?? undefined
+                                themeCustomAccent: appConfig.themeCustomAccent ?? undefined,
+                                themeBg: appConfig.themeBg ?? undefined,
+                                themeCustomBg: appConfig.themeCustomBg ?? undefined
                             }
                         });
                     } else {
@@ -571,7 +573,9 @@ export async function POST(req: NextRequest) {
                                 themeBlogSize: appConfig.themeBlogSize ?? undefined,
                                 themeCodeFont: appConfig.themeCodeFont ?? undefined,
                                 themeAccent: appConfig.themeAccent ?? undefined,
-                                themeCustomAccent: appConfig.themeCustomAccent ?? undefined
+                                themeCustomAccent: appConfig.themeCustomAccent ?? undefined,
+                                themeBg: appConfig.themeBg ?? undefined,
+                                themeCustomBg: appConfig.themeCustomBg ?? undefined
                             }
                         });
                     }

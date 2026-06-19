@@ -187,4 +187,6 @@ model AppConfig {
   themeCodeFont       String  @default("geist")
   themeAccent         String  @default("sage")
   themeCustomAccent   String  @default("#768882")
+  themeBg             String  @default("white")
+  themeCustomBg       String  @default("#ffffff")
 }

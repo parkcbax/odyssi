@@ -257,6 +257,37 @@ html[data-accent="custom"] {
   --sidebar-primary-foreground: #191919;
 }
 
+/* Background Color Settings Overrides */
+html[data-bg="white"] {
+  --background: #ffffff;
+}
+html[data-bg="cream"] {
+  --background: #fbf8f2;
+}
+html[data-bg="gray"] {
+  --background: #f7f7f5;
+}
+html[data-bg="custom"] {
+  --background: var(--custom-background);
+}
+
+.dark[data-bg="white"],
+.dark [data-bg="white"] {
+  --background: #191919;
+}
+.dark[data-bg="cream"],
+.dark [data-bg="cream"] {
+  --background: #201c18;
+}
+.dark[data-bg="gray"],
+.dark [data-bg="gray"] {
+  --background: #222222;
+}
+.dark[data-bg="custom"],
+.dark [data-bg="custom"] {
+  --background: color-mix(in srgb, var(--custom-background) 12%, #191919 88%);
+}
+
 /* Custom Tiptap Link Styling */
 .ProseMirror a,
 .prose a {

@@ -23,6 +23,12 @@ const ACCENT_COLORS = [
     { name: "pink", color: "#c14c8a", label: "Pink" },
 ]
 
+const BG_COLORS = [
+    { name: "white", color: "#ffffff", label: "White" },
+    { name: "cream", color: "#fbf8f2", label: "Cream" },
+    { name: "gray", color: "#f7f7f5", label: "Gray" },
+]
+
 interface UISettingsFormProps {
     enableBlogging?: boolean
     appConfig?: any
@@ -39,6 +45,8 @@ export function UISettingsForm({ enableBlogging, appConfig }: UISettingsFormProp
     const [codeFont, setCodeFont] = useState(appConfig?.themeCodeFont || "geist")
     const [accent, setAccent] = useState(appConfig?.themeAccent || "sage")
     const [customColor, setCustomColor] = useState(appConfig?.themeCustomAccent || "#768882")
+    const [bg, setBg] = useState(appConfig?.themeBg || "white")
+    const [customBg, setCustomBg] = useState(appConfig?.themeCustomBg || "#ffffff")
 
     useEffect(() => {
         if (state?.message === "Success") {
@@ -90,6 +98,27 @@ export function UISettingsForm({ enableBlogging, appConfig }: UISettingsFormProp
         }
     }
 
+    const handleBgChange = (value: string) => {
+        setBg(value)
+        document.documentElement.setAttribute("data-bg", value)
+        if (value === "custom") {
+            document.documentElement.style.setProperty("--custom-background", customBg)
+        } else {
+            document.documentElement.style.removeProperty("--custom-background")
+        }
+    }
+
+    const handleCustomBgChange = (value: string) => {
+        let cleanVal = value
+        if (cleanVal && !cleanVal.startsWith("#")) {
+            cleanVal = "#" + cleanVal
+        }
+        setCustomBg(cleanVal)
+        if (bg === "custom") {
+            document.documentElement.style.setProperty("--custom-background", cleanVal)
+        }
+    }
+
     return (
         <form action={formAction} className="space-y-6">
             <input type="hidden" name="font" value={font} />
@@ -98,6 +127,8 @@ export function UISettingsForm({ enableBlogging, appConfig }: UISettingsFormProp
             <input type="hidden" name="codeFont" value={codeFont} />
             <input type="hidden" name="accent" value={accent} />
             <input type="hidden" name="customAccent" value={customColor} />
+            <input type="hidden" name="bg" value={bg} />
+            <input type="hidden" name="customBg" value={customBg} />
             <Card>
                 <CardHeader>
                     <CardTitle>Theme</CardTitle>
@@ -230,6 +261,97 @@ export function UISettingsForm({ enableBlogging, appConfig }: UISettingsFormProp
                                         type="color"
                                         value={customColor}
                                         onChange={(e) => handleCustomColorChange(e.target.value)}
+                                        className="w-8 h-8 rounded border p-0 cursor-pointer overflow-hidden"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Background Color</CardTitle>
+                    <CardDescription>
+                        Select a primary preset background color or customize using a custom hex code.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Label>Selected:</Label>
+                            <span className="text-sm font-medium text-muted-foreground">
+                                {bg === "custom" ? `Custom (${customBg})` : (BG_COLORS.find(c => c.name === bg)?.label || "White")}
+                            </span>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                            {BG_COLORS.map((item) => (
+                                <button
+                                    key={item.name}
+                                    type="button"
+                                    className={cn(
+                                        "h-8 w-8 rounded-full transition-all border-2 flex items-center justify-center relative hover:scale-105 active:scale-95 cursor-pointer",
+                                        bg === item.name ? "border-foreground scale-110" : "border-border hover:border-muted-foreground/30"
+                                    )}
+                                    style={{ backgroundColor: item.color }}
+                                    onClick={() => handleBgChange(item.name)}
+                                    title={item.label}
+                                >
+                                    {bg === item.name && (
+                                        <span className={cn(
+                                            "text-xs font-bold drop-shadow-xs",
+                                            item.name === "white" ? "text-black" : "text-white"
+                                        )}>✓</span>
+                                    )}
+                                </button>
+                            ))}
+                            
+                            {/* Custom Background Selector Button */}
+                            <button
+                                type="button"
+                                className={cn(
+                                    "h-8 w-8 rounded-full transition-all border-2 flex items-center justify-center relative hover:scale-105 active:scale-95 cursor-pointer",
+                                    bg === "custom" ? "border-foreground scale-110" : "border-border hover:border-muted-foreground/30"
+                                )}
+                                style={{ background: "linear-gradient(135deg, #ff4500 0%, #ff8c00 17%, #ffd700 33%, #32cd32 50%, #1e90ff 67%, #9932cc 83%, #ff4500 100%)" }}
+                                onClick={() => handleBgChange("custom")}
+                                title="Custom Hex Background Color"
+                            >
+                                {bg === "custom" && (
+                                    <span className="text-white text-xs font-bold drop-shadow-xs">✓</span>
+                                )}
+                            </button>
+                        </div>
+
+                        {bg === "custom" && (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-4 pt-3 border-t animate-in fade-in duration-200">
+                                <div className="flex items-center gap-2">
+                                    <Label htmlFor="custom-bg-input" className="text-sm">Hex Code:</Label>
+                                    <div className="flex items-center gap-1.5 border rounded-md px-2.5 py-1.5 bg-background text-sm max-w-[140px]">
+                                        <span className="text-muted-foreground font-mono">#</span>
+                                        <input
+                                            id="custom-bg-input"
+                                            type="text"
+                                            value={customBg.replace("#", "")}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val.length <= 6) {
+                                                    handleCustomBgChange("#" + val);
+                                                }
+                                            }}
+                                            placeholder="ffffff"
+                                            className="w-full bg-transparent border-0 outline-none p-0 text-sm font-mono"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label htmlFor="custom-bg-picker" className="text-sm">Color Picker:</Label>
+                                    <input
+                                        id="custom-bg-picker"
+                                        type="color"
+                                        value={customBg}
+                                        onChange={(e) => handleCustomBgChange(e.target.value)}
                                         className="w-8 h-8 rounded border p-0 cursor-pointer overflow-hidden"
                                     />
                                 </div>
