@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback, useEffect, type CSSProperties } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { format, isSameDay } from "date-fns"
-import Link from "next/link"
-import { ChevronLeft, ChevronRight, MessageSquare, MapPin } from "lucide-react"
-import { ImageWithLoader } from "@/components/ui/image-with-loader"
+import { ChevronLeft, ChevronRight, MessageSquare, Loader2, ExternalLink, Calendar } from "lucide-react"
+import { EntryViewer } from "@/components/entry-viewer"
 import { cn } from "@/lib/utils"
 
 interface TimelineYearActivityProps {
@@ -15,21 +14,34 @@ interface TimelineYearActivityProps {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-/** GitHub-style intensity levels keyed by entry count. */
-function levelClass(count: number) {
-    if (count === 0) return "bg-muted/60 hover:bg-muted"
-    if (count <= 2) return "bg-emerald-300 hover:bg-emerald-400 dark:bg-emerald-400/60 dark:hover:bg-emerald-400/80"
-    if (count <= 5) return "bg-emerald-400 hover:bg-emerald-500 dark:bg-emerald-500/70 dark:hover:bg-emerald-500/90"
-    if (count <= 9) return "bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600/80 dark:hover:bg-emerald-600"
-    return "bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+interface ActivityEntry {
+    id: string
+    title: string
+    date: string
+    mood?: string
+    locationName?: string
+    journal?: { title: string; color: string }
+    tags?: { name: string }[]
+    content: any
 }
 
-const LEGEND_COUNTS = [0, 2, 5, 9, 999]
+/** Levels 0..4, colored via CSS var so it follows the user's accent color. */
+const LEVEL_OPACITY = [0.15, 0.35, 0.55, 0.75, 1]
+
+const LEGEND_LEVELS = [0, 1, 2, 3, 4]
+
+function levelStyle(count: number): CSSProperties {
+    const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4
+    if (level === 0) return { backgroundColor: "var(--muted)" }
+    return { backgroundColor: `var(--primary)`, opacity: LEVEL_OPACITY[level] }
+}
 
 export function TimelineYearActivity({ entries }: TimelineYearActivityProps) {
     const currentYear = new Date().getFullYear()
     const [year, setYear] = useState<number>(currentYear)
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => new Date())
+    const [dayEntries, setDayEntries] = useState<ActivityEntry[] | null>(null)
+    const [loading, setLoading] = useState(false)
 
     const minYear = useMemo(() => {
         if (entries.length === 0) return currentYear
@@ -86,17 +98,54 @@ export function TimelineYearActivity({ entries }: TimelineYearActivityProps) {
             .filter((x): x is { index: number; label: string } => x !== null)
     }, [weeks, year])
 
-    const selectedDateEntries = useMemo(() => {
-        if (!selectedDate) return []
-        return entries.filter(entry => isSameDay(new Date(entry.date), selectedDate))
-    }, [entries, selectedDate])
+    const fetchDayEntries = useCallback(async (date: Date) => {
+        setLoading(true)
+        setDayEntries(null)
+        try {
+            // Use the exact same client-side day matching as the graph counts,
+            // so the list always matches what the graph shows for that day.
+            const dayEntryIds = entries
+                .filter(entry => isSameDay(new Date(entry.date), date))
+                .map(entry => entry.id)
+            if (dayEntryIds.length === 0) {
+                setDayEntries([])
+                setLoading(false)
+                return
+            }
+            const res = await fetch(`/api/activity-entries?ids=${encodeURIComponent(dayEntryIds.join(','))}`)
+            if (!res.ok) throw new Error("Failed to fetch")
+            const data = await res.json()
+            setDayEntries(data.entries || [])
+        } catch (e) {
+            console.error("Failed to load day entries:", e)
+            setDayEntries([])
+        } finally {
+            setLoading(false)
+        }
+    }, [entries])
 
-    const changeYear = (delta: number) => {
+    const handleDayClick = useCallback((day: Date) => {
+        const next = new Date(year, day.getMonth(), day.getDate())
+        setSelectedDate(next)
+        fetchDayEntries(next)
+    }, [year, fetchDayEntries])
+
+    const changeYear = useCallback((delta: number) => {
         const next = year + delta
         if (next > currentYear || next < minYear) return
         setYear(next)
         setSelectedDate(undefined)
-    }
+        setDayEntries(null)
+    }, [year, currentYear, minYear])
+
+    // Default selection = today (only meaningful when the current year is shown)
+    useEffect(() => {
+        if (year === currentYear && !selectedDate) {
+            const today = new Date()
+            setSelectedDate(today)
+            fetchDayEntries(today)
+        }
+    }, [year, currentYear, selectedDate, fetchDayEntries])
 
     const yearEntries = entries.filter(e => new Date(e.date).getFullYear() === year)
 
@@ -131,8 +180,12 @@ export function TimelineYearActivity({ entries }: TimelineYearActivityProps) {
 
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                             <span>Less</span>
-                            {LEGEND_COUNTS.map(c => (
-                                <span key={c} className={cn("h-[11px] w-[11px] rounded-[2px]", levelClass(c))} />
+                            {LEGEND_LEVELS.map(l => (
+                                <span
+                                    key={l}
+                                    className="h-[11px] w-[11px] rounded-[2px]"
+                                    style={levelStyle(l === 0 ? 0 : [2, 5, 9, 999][l - 1])}
+                                />
                             ))}
                             <span>More</span>
                         </div>
@@ -179,15 +232,14 @@ export function TimelineYearActivity({ entries }: TimelineYearActivityProps) {
                                                     key={wi + "-" + key}
                                                     type="button"
                                                     title={`${count} ${count === 1 ? "entry" : "entries"} on ${format(day, "MMM d, yyyy")}`}
-                                                    onClick={() =>
-                                                        setSelectedDate(new Date(year, day.getMonth(), day.getDate()))
-                                                    }
+                                                    onClick={() => handleDayClick(day)}
                                                     className={cn(
-                                                        "h-[11px] w-[11px] rounded-[2px] transition-colors",
+                                                        "h-[11px] w-[11px] rounded-[2px] transition-colors outline-offset-1",
                                                         !inYear && "bg-transparent hover:bg-transparent cursor-default",
-                                                        inYear && levelClass(count),
-                                                        isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                                                        isSelected && "outline-2 outline-primary"
                                                     )}
+                                                    style={inYear ? levelStyle(count) : undefined}
+                                                    aria-label={format(day, "MMMM d, yyyy")}
                                                 />
                                             )
                                         })
@@ -204,75 +256,66 @@ export function TimelineYearActivity({ entries }: TimelineYearActivityProps) {
                 </CardContent>
             </Card>
 
-            {/* Entries for the selected day */}
+            {/* Full entries for the selected day */}
             <div>
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-sm">
                         {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Select a day"}
                     </h3>
-                    <span className="text-xs text-muted-foreground">
-                        {selectedDateEntries.length} {selectedDateEntries.length === 1 ? "entry" : "entries"}
-                    </span>
+                    {!loading && dayEntries && (
+                        <span className="text-xs text-muted-foreground">
+                            {dayEntries.length} {dayEntries.length === 1 ? "entry" : "entries"}
+                        </span>
+                    )}
                 </div>
 
-                {selectedDateEntries.length > 0 ? (
-                    <div className="space-y-4">
-                        {selectedDateEntries.map(entry => (
-                            <Link key={entry.id} href={`/entries/${entry.id}`} className="block">
-                                <Card className="hover:bg-muted/50 transition-colors group cursor-pointer">
-                                    <CardContent className="p-3 flex flex-col gap-3">
-                                        <div className="flex items-start gap-3">
-                                            {entry.mood && (
-                                                <span className="text-xl shrink-0 mt-0.5">{entry.mood}</span>
-                                            )}
-                                            <div className="flex flex-1 items-start justify-between gap-3 min-w-0">
-                                                <div className="min-w-0 flex-1">
-                                                    <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-                                                        {entry.title}
-                                                    </h4>
-                                                    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                                                        <div
-                                                            className="w-1.5 h-1.5 rounded-full"
-                                                            style={{ backgroundColor: entry.journal.color }}
-                                                        />
-                                                        {entry.journal.title}
-                                                    </div>
-                                                </div>
-                                                {entry.firstImage && (
-                                                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded border bg-muted">
-                                                        <ImageWithLoader
-                                                            src={entry.firstImage}
-                                                            alt={entry.title}
-                                                            className="h-full w-full object-cover"
-                                                            containerClassName="h-full w-full"
-                                                        />
-                                                    </div>
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center p-10 border border-dashed rounded-lg text-muted-foreground">
+                        <Loader2 className="h-6 w-6 mb-2 animate-spin opacity-40" />
+                        <p className="text-xs italic">Loading entries...</p>
+                    </div>
+                ) : dayEntries && dayEntries.length > 0 ? (
+                    <div className="space-y-6">
+                        {dayEntries.map(entry => (
+                            <Card key={entry.id} className="overflow-hidden">
+                                <CardContent className="p-5">
+                                    <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-semibold text-lg">{entry.title}</h4>
+                                            <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                                                {entry.journal?.color && (
+                                                    <span
+                                                        className="w-1.5 h-1.5 rounded-full"
+                                                        style={{ backgroundColor: entry.journal.color }}
+                                                    />
                                                 )}
+                                                <span>{entry.journal?.title}</span>
+                                                {entry.mood && <span className="normal-case tracking-normal text-sm">{entry.mood}</span>}
                                             </div>
                                         </div>
-
-                                        <div className="text-xs text-muted-foreground line-clamp-2">
-                                            {entry.snippet}
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <Button variant="ghost" size="sm" asChild>
+                                                <a href={`/entries/${entry.id}`}>
+                                                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                                    Open entry
+                                                </a>
+                                            </Button>
                                         </div>
+                                    </div>
 
-                                        {(entry.locationName || (entry.tags && entry.tags.length > 0)) && (
-                                            <div className="flex flex-wrap gap-2 items-center text-[10px] text-muted-foreground pt-1 border-t mt-1">
-                                                {entry.locationName && (
-                                                    <span className="flex items-center gap-0.5 truncate max-w-[150px]">
-                                                        <MapPin className="h-3 w-3 shrink-0" />
-                                                        {entry.locationName}
-                                                    </span>
-                                                )}
-                                                {entry.tags && entry.tags.map((tag: any) => (
-                                                    <span key={tag.name} className="bg-muted px-1.5 py-0.5 rounded-full truncate max-w-[100px]">
-                                                        #{tag.name}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                                    {/* Full content render (TipTap, incl. PDF <object> -> iframe) */}
+                                    <EntryViewer content={entry.content} />
+
+                                    {entry.locationName && (
+                                        <div className="flex items-center gap-1.5 mt-4 pt-3 border-t text-xs text-muted-foreground">
+                                            <Calendar className="h-3 w-3" />
+                                            {format(new Date(entry.date), "MMMM d, yyyy")}
+                                            <span className="mx-1">·</span>
+                                            <span className="truncate max-w-[200px]">{entry.locationName}</span>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         ))}
                     </div>
                 ) : (
