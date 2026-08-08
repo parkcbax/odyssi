@@ -5,9 +5,19 @@ import { EntryEditor } from "@/components/entry-editor"
 
 export const dynamic = 'force-dynamic'
 
-export default async function NewEntryPage() {
+export default async function NewEntryPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
+
+    const resolvedParams = await searchParams
+    const dateParam = typeof resolvedParams.date === 'string' ? resolvedParams.date : undefined
+    const initialData = dateParam && !isNaN(new Date(dateParam).getTime())
+        ? { date: new Date(dateParam) }
+        : undefined
 
     // Fetch journals for the selector
     const journals = await prisma.journal.findMany({
@@ -28,7 +38,7 @@ export default async function NewEntryPage() {
 
     return (
         <div className="max-w-4xl mx-auto h-full">
-            <EntryEditor journals={journals} />
+            <EntryEditor journals={journals} initialData={initialData as any} />
         </div>
     )
 }

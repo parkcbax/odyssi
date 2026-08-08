@@ -7,9 +7,16 @@ import { RecentEntriesList } from "@/components/dashboard/recent-entries-list"
 
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     const session = await auth()
     if (!session?.user?.id) return redirect("/login")
+
+    const resolvedParams = await searchParams
+    const selectedDateParam = typeof resolvedParams.date === 'string' ? resolvedParams.date : undefined
 
     const user = await prisma.user.findUnique({
         where: { id: session.user.id },
@@ -26,16 +33,7 @@ export default async function DashboardPage() {
         include: { journal: true }
     })
 
-    // Fetch "On This Day" entries (same month and day in previous years)
-    const today = new Date()
-    const month = today.getMonth() + 1 // Prisma/JS month is 0-indexed, but let's be careful with DB
-    const day = today.getDate()
-
-    // Note: This is a complex query for Prisma if we don't have month/day extracted.
-    // We'll fetch all and filter for now if the dataset is small, or use a raw query.
-    // For Odyssi, let's try a slightly better Prisma approach or raw query.
-
-    // Prevent OOM by only fetching the ID and dates first
+    // Fetch all entries dates for the user (IDs + dates only, to avoid OOM)
     const allEntriesDates = await prisma.entry.findMany({
         where: {
             journal: { userId: session.user.id }
@@ -43,11 +41,31 @@ export default async function DashboardPage() {
         select: { id: true, date: true }
     })
 
+    // Determine selected month/day. Defaults to today.
+    let selectedMonth: number
+    let selectedDay: number
+    if (selectedDateParam) {
+        const parsed = new Date(selectedDateParam)
+        if (!isNaN(parsed.getTime())) {
+            selectedMonth = parsed.getMonth() + 1
+            selectedDay = parsed.getDate()
+        } else {
+            const now = new Date()
+            selectedMonth = now.getMonth() + 1
+            selectedDay = now.getDate()
+        }
+    } else {
+        const now = new Date()
+        selectedMonth = now.getMonth() + 1
+        selectedDay = now.getDate()
+    }
+
+    // "On This Day" entries: same month/day in previous years
     const onThisDayEntryIds = allEntriesDates.filter(entry => {
         const entryDate = new Date(entry.date)
-        return entryDate.getMonth() === today.getMonth() &&
-            entryDate.getDate() === today.getDate() &&
-            entryDate.getFullYear() < today.getFullYear()
+        return entryDate.getMonth() + 1 === selectedMonth &&
+            entryDate.getDate() === selectedDay &&
+            entryDate.getFullYear() < new Date().getFullYear()
     }).map(e => e.id)
 
     // Now securely fetch only the full matching entries
@@ -56,6 +74,9 @@ export default async function DashboardPage() {
         orderBy: { date: 'desc' },
         include: { journal: true }
     })
+
+    // The card only uses month/day, so a fixed reference year avoids rollover edge cases
+    const initialDate = new Date(2000, selectedMonth - 1, selectedDay)
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
@@ -73,7 +94,7 @@ export default async function DashboardPage() {
                     <RecentEntriesList entries={recentEntries} />
                 </div>
                 <div className="lg:col-span-1">
-                    <OnThisDayCard entries={onThisDayEntries} />
+                    <OnThisDayCard entries={onThisDayEntries} initialDate={initialDate} />
                 </div>
             </div>
         </div>
