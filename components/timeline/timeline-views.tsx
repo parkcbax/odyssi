@@ -1,15 +1,16 @@
 "use client"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { List, Calendar as CalendarIcon, Image as ImageIcon } from "lucide-react"
+import { List, Calendar as CalendarIcon, Image as ImageIcon, BarChart3 } from "lucide-react"
 import { TimelineList } from "./timeline-list"
 import { TimelineCalendar } from "./timeline-calendar"
 import { TimelineMedia } from "./timeline-media"
+import { TimelineYearActivity } from "./timeline-year-activity"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 
 interface TimelineViewsProps {
     entries: any[]
-    defaultView?: "list" | "calendar" | "media"
+    defaultView?: "list" | "calendar" | "media" | "activity"
 }
 
 export function TimelineViews({ entries, defaultView = "list" }: TimelineViewsProps) {
@@ -24,7 +25,7 @@ export function TimelineViews({ entries, defaultView = "list" }: TimelineViewsPr
     return (
         <Tabs defaultValue={defaultView} className="w-full">
             <div className="flex justify-center mb-8">
-                <TabsList className="grid w-full max-w-[500px] grid-cols-3">
+                <TabsList className="grid w-full max-w-[640px] grid-cols-4">
                     <TabsTrigger value="list" className="flex items-center gap-2">
                         <List className="h-4 w-4" />
                         List View
@@ -32,6 +33,10 @@ export function TimelineViews({ entries, defaultView = "list" }: TimelineViewsPr
                     <TabsTrigger value="calendar" className="flex items-center gap-2">
                         <CalendarIcon className="h-4 w-4" />
                         Calendar View
+                    </TabsTrigger>
+                    <TabsTrigger value="activity" className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Year Activity
                     </TabsTrigger>
                     <TabsTrigger value="media" className="flex items-center gap-2">
                         <ImageIcon className="h-4 w-4" />
@@ -46,6 +51,10 @@ export function TimelineViews({ entries, defaultView = "list" }: TimelineViewsPr
 
             <TabsContent value="calendar" className="mt-0 outline-none">
                 <TimelineCalendar entries={entries} />
+            </TabsContent>
+
+            <TabsContent value="activity" className="mt-0 outline-none">
+                <TimelineYearActivity entries={entries} />
             </TabsContent>
 
             <TabsContent value="media" className="mt-0 outline-none">
