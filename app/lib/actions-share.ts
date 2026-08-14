@@ -65,7 +65,15 @@ export async function getPublicEntry(slug: string) {
             where: { publicSlug: slug },
             include: {
                 journal: {
-                    include: { user: true }
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                timezone: true
+                            }
+                        }
+                    }
                 },
                 images: true,
                 tags: true

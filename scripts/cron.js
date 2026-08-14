@@ -12,7 +12,11 @@ async function triggerBackup() {
     try {
         console.log(`[Cron] Triggering backup check at ${new Date().toISOString()}...`);
         // Node 18+ has global fetch
-        const res = await fetch(API_URL);
+        const headers = {};
+        if (process.env.CRON_SECRET) {
+            headers['x-cron-secret'] = process.env.CRON_SECRET;
+        }
+        const res = await fetch(API_URL, { headers });
 
         if (res.ok) {
             const data = await res.json();

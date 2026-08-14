@@ -4,7 +4,7 @@ import { readFile, stat } from "fs/promises"
 import { join } from "path"
 // import mime from "mime" - Removed to avoid dependency
 
-// Simple mime map to avoid external dep for this critical fix if 'mime' isn't installed
+// Simple mime map external dep critical fix if 'mime' isn't installed
 const getMimeType = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase()
     switch (ext) {
@@ -18,6 +18,9 @@ const getMimeType = (filename: string) => {
     }
 }
 
+// Only allow image extensions (SVG excluded - can carry script payloads)
+const ALLOWED_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
+
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ path: string[] }> }
@@ -29,6 +32,12 @@ export async function GET(
         // Security check: ensure no directory traversal
         if (filename.includes('..')) {
             return new NextResponse("Invalid path", { status: 400 })
+        }
+
+        // Only serve allowed image extensions (no html/svg/js/pdf/etc.)
+        const ext = filename.split('.').pop()?.toLowerCase() ?? ''
+        if (!ALLOWED_EXTENSIONS.has(ext)) {
+            return new NextResponse("Not found", { status: 404 })
         }
 
         const filePath = join(process.cwd(), "public", "uploads", filename)

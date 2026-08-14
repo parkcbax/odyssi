@@ -3,6 +3,13 @@ import { prisma } from "@/lib/prisma"
 import { generateBackup } from "@/app/lib/backup-service"
 
 export async function GET(req: NextRequest) {
+    // Auth: require CRON_SECRET header (internal cron only). Reject otherwise.
+    const secret = process.env.CRON_SECRET;
+    const provided = req.headers.get('x-cron-secret') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    if (!secret || !provided || provided !== secret) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     try {
         const config = await prisma.appConfig.findFirst()
 
