@@ -13,12 +13,13 @@ import { useRouter } from "next/navigation"
 interface AdditionalFeaturesFormProps {
     redirectHomeToLogin: boolean
     enableBlogging: boolean
+    enableNewsFeed?: boolean
     enableMultiUser: boolean
     enableUserBlogging: boolean
     analyticSnippet?: string | null
 }
 
-export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, enableMultiUser, enableUserBlogging, analyticSnippet }: AdditionalFeaturesFormProps) {
+export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, enableNewsFeed = false, enableMultiUser, enableUserBlogging, analyticSnippet }: AdditionalFeaturesFormProps) {
     const [state, formAction, isPending] = useActionState(updateAppFeatures, null)
     const router = useRouter()
 
@@ -65,6 +66,19 @@ export function AdditionalFeaturesForm({ redirectHomeToLogin, enableBlogging, en
                             id="enableBlogging"
                             name="enableBlogging"
                             defaultChecked={enableBlogging}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between space-x-2">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="enableNewsFeed" className="text-base">News Feed Feature</Label>
+                            <p className="text-sm text-muted-foreground">
+                                If enabled, adds a "News" section to the sidebar for reading RSS news feeds.
+                            </p>
+                        </div>
+                        <Switch
+                            id="enableNewsFeed"
+                            name="enableNewsFeed"
+                            defaultChecked={enableNewsFeed}
                         />
                     </div>
                     <div className="flex items-center justify-between space-x-2">

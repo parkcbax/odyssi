@@ -48,7 +48,7 @@ RUN adduser --system --uid 1001 nextjs
 RUN npm config set fetch-retry-maxtimeout 600000 && \
     npm config set fetch-retry-mintimeout 100000 && \
     npm config set fetch-retries 10 && \
-    npm install -g prisma
+    npm install -g prisma@7.3.0
 
 # Ensure uploads and backups directories exist for volume mapping
 RUN mkdir -p /app/public/uploads /app/backups && chown -R nextjs:nodejs /app/public/uploads /app/backups

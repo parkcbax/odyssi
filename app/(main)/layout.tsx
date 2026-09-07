@@ -22,6 +22,7 @@ export default async function MainLayout({
         <SidebarProvider defaultOpen={defaultOpen}>
             <AppSidebar
                 enableBlogging={config?.enableBlogging ?? false}
+                enableNewsFeed={config?.enableNewsFeed ?? false}
                 isAdmin={isUserAdmin}
                 enableMultiUser={config?.enableMultiUser ?? false}
                 enableUserBlogging={config?.enableUserBlogging ?? false}

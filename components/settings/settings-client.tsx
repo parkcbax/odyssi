@@ -107,6 +107,7 @@ export function SettingsClient({ user, journals, appConfig, isUserAdmin }: Setti
                             <AdditionalFeaturesForm
                                 redirectHomeToLogin={appConfig.redirectHomeToLogin}
                                 enableBlogging={appConfig.enableBlogging}
+                                enableNewsFeed={appConfig.enableNewsFeed}
                                 enableMultiUser={appConfig.enableMultiUser}
                                 enableUserBlogging={appConfig.enableUserBlogging}
                                 analyticSnippet={appConfig.analyticSnippet}

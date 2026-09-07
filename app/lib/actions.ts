@@ -6,6 +6,7 @@ import { redirect } from "next/navigation"
 import { getExcerpt } from "@/app/lib/blog-utils"
 import { isAdmin } from "@/lib/auth-utils"
 import bcrypt from "bcryptjs"
+import { DEFAULT_FEEDS, fetchFeed, isValidPublicHttpUrl, RssArticle } from "@/lib/rss"
 
 export async function authenticate(
     prevState: string | undefined,
@@ -481,14 +482,15 @@ export async function getAppConfig() {
                     enableUserBlogging: false,
                     autoBackupInterval: "1Week",
                     analyticSnippet: "",
-                    themeFont: "inter",
-                    themeBlogFont: "inter",
+                    themeFont: "prompt",
+                    themeBlogFont: "prompt",
                     themeBlogSize: "medium",
                     themeCodeFont: "geist",
                     themeAccent: "sage",
                     themeCustomAccent: "#768882",
                     themeBg: "white",
-                    themeCustomBg: "#ffffff"
+                    themeCustomBg: "#ffffff",
+                    enableNewsFeed: false
                 }
             })
         }
@@ -503,8 +505,8 @@ export async function updateUISettings(prevState: any, formData: FormData) {
     const session = await auth()
     if (!session?.user?.id) return { message: "Unauthorized" }
 
-    const font = formData.get("font") as string || "inter"
-    const blogFont = formData.get("blogFont") as string || "inter"
+    const font = formData.get("font") as string || "prompt"
+    const blogFont = formData.get("blogFont") as string || "prompt"
     const blogSize = formData.get("blogSize") as string || "medium"
     const codeFont = formData.get("codeFont") as string || "geist"
     const accent = formData.get("accent") as string || "sage"
@@ -543,10 +545,7 @@ export async function updateUISettings(prevState: any, formData: FormData) {
                     themeCustomBg: customBg,
                     redirectHomeToLogin: false,
                     enableBlogging: false,
-                    enableMultiUser: false,
-                    enableUserBlogging: false,
-                    autoBackupInterval: "1Week",
-                    analyticSnippet: ""
+                    enableNewsFeed: false,
                 }
             })
         }
@@ -565,18 +564,12 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
 
     const redirectHomeToLogin = formData.get("redirectHomeToLogin") === "on"
     const enableBlogging = formData.get("enableBlogging") === "on"
+    const enableNewsFeed = formData.get("enableNewsFeed") === "on"
     const enableAutoBackup = formData.get("enableAutoBackup") === "on"
     const enableMultiUser = formData.get("enableMultiUser") === "on"
     const enableUserBlogging = formData.get("enableUserBlogging") === "on"
     const autoBackupInterval = formData.get("autoBackupInterval") as string || "1Week"
     const analyticSnippet = formData.get("analyticSnippet") as string || ""
-
-    console.log("updateAppFeatures called", {
-        redirectHomeToLogin,
-        enableMultiUser,
-        analyticSnippetLength: analyticSnippet.length,
-        analyticSnippetValue: analyticSnippet.substring(0, 50) + "..."
-    })
 
     try {
         const config = await prisma.appConfig.findFirst()
@@ -588,6 +581,7 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
                 data: {
                     redirectHomeToLogin,
                     enableBlogging,
+                    enableNewsFeed,
                     enableAutoBackup,
                     enableMultiUser,
                     enableUserBlogging,
@@ -600,6 +594,7 @@ export async function updateAppFeatures(prevState: any, formData: FormData) {
                 data: {
                     redirectHomeToLogin,
                     enableBlogging,
+                    enableNewsFeed,
                     enableAutoBackup,
                     enableMultiUser,
                     enableUserBlogging,
@@ -895,3 +890,239 @@ export async function deleteUser(userId: string) {
         return { error: "Failed to delete user" }
     }
 }
+
+// ==========================================
+// News Feed & Saved Articles Server Actions
+// ==========================================
+
+export async function getNewsFeeds() {
+    const session = await auth()
+    if (!session?.user?.id) throw new Error("Unauthorized")
+
+    // Retrieve default/system feeds (userId null) and user's custom feeds
+    let feeds = await prisma.rssFeed.findMany({
+        where: {
+            OR: [
+                { userId: null },
+                { userId: session.user.id }
+            ]
+        },
+        orderBy: { createdAt: "asc" }
+    })
+
+    // If no feeds in database yet, initialize with DEFAULT_FEEDS
+    if (feeds.length === 0) {
+        await prisma.rssFeed.createMany({
+            data: DEFAULT_FEEDS.map(f => ({
+                title: f.title,
+                url: f.url,
+                category: f.category,
+                userId: null
+            }))
+        })
+
+        feeds = await prisma.rssFeed.findMany({
+            where: {
+                OR: [
+                    { userId: null },
+                    { userId: session.user.id }
+                ]
+            },
+            orderBy: { createdAt: "asc" }
+        })
+    } else {
+        // Sync default feeds category if they were saved with 'General' or null before category support
+        const defaultUrls = new Map(DEFAULT_FEEDS.map(d => [d.url, d.category]))
+        for (const feed of feeds) {
+            if (feed.userId === null && defaultUrls.has(feed.url)) {
+                const targetCat = defaultUrls.get(feed.url)!
+                if (feed.category !== targetCat) {
+                    await prisma.rssFeed.update({
+                        where: { id: feed.id },
+                        data: { category: targetCat }
+                    }).catch(() => {})
+                    feed.category = targetCat
+                }
+            }
+        }
+    }
+
+    return feeds
+}
+
+export async function addNewsFeed(formData: FormData) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    const title = (formData.get("title") as string)?.trim()
+    const url = (formData.get("url") as string)?.trim()
+    const category = (formData.get("category") as string)?.trim() || "General"
+
+    if (!title || !url) {
+        return { error: "Title and RSS Feed URL are required" }
+    }
+
+    // SSRF & protocol validation
+    if (!isValidPublicHttpUrl(url)) {
+        return { error: "Invalid URL or prohibited network address. Only public HTTP/HTTPS URLs are allowed." }
+    }
+
+    try {
+        // Quick verification parse test
+        const testArticles = await fetchFeed(url, title)
+        if (testArticles.length === 0) {
+            // Still allow if feed exists, but inform user if empty
+        }
+
+        await prisma.rssFeed.create({
+            data: {
+                title,
+                url,
+                category,
+                userId: session.user.id
+            }
+        })
+
+        revalidatePath("/news")
+        return { success: true }
+    } catch (error: any) {
+        console.error("Failed to add RSS feed:", error)
+        return { error: error?.message || "Failed to add RSS feed" }
+    }
+}
+
+export async function deleteNewsFeed(feedId: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    const isUserAdmin = isAdmin(session?.user?.email)
+
+    try {
+        const feed = await prisma.rssFeed.findUnique({
+            where: { id: feedId }
+        })
+
+        if (!feed) return { error: "Feed not found" }
+
+        // User can delete their own feed, or admin can delete system feed
+        if (feed.userId !== session.user.id && !isUserAdmin) {
+            return { error: "Unauthorized to delete this feed" }
+        }
+
+        await prisma.rssFeed.delete({
+            where: { id: feedId }
+        })
+
+        revalidatePath("/news")
+        return { success: true }
+    } catch (error) {
+        console.error("Failed to delete RSS feed:", error)
+        return { error: "Failed to delete RSS feed" }
+    }
+}
+
+export async function fetchAllFeedArticles(): Promise<RssArticle[]> {
+    const session = await auth()
+    if (!session?.user?.id) return []
+
+    const feeds = await getNewsFeeds()
+
+    const results = await Promise.allSettled(
+        feeds.map(feed => fetchFeed(feed.url, feed.title, feed.category || "General"))
+    )
+
+    const allArticles: RssArticle[] = []
+    for (const res of results) {
+        if (res.status === "fulfilled") {
+            allArticles.push(...res.value)
+        }
+    }
+
+    // Sort newest first
+    allArticles.sort((a, b) => {
+        const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0
+        const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0
+        return dateB - dateA
+    })
+
+    return allArticles
+}
+
+export async function saveArticle(article: {
+    title: string
+    link: string
+    content?: string
+    excerpt?: string
+    imageUrl?: string
+    sourceTitle?: string
+    pubDate?: string
+}) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        await prisma.savedArticle.upsert({
+            where: {
+                userId_link: {
+                    userId: session.user.id,
+                    link: article.link
+                }
+            },
+            update: {
+                title: article.title,
+                content: article.content,
+                excerpt: article.excerpt,
+                imageUrl: article.imageUrl,
+                sourceTitle: article.sourceTitle,
+                pubDate: article.pubDate ? new Date(article.pubDate) : null
+            },
+            create: {
+                userId: session.user.id,
+                title: article.title,
+                link: article.link,
+                content: article.content,
+                excerpt: article.excerpt,
+                imageUrl: article.imageUrl,
+                sourceTitle: article.sourceTitle,
+                pubDate: article.pubDate ? new Date(article.pubDate) : null
+            }
+        })
+
+        revalidatePath("/news")
+        return { success: true }
+    } catch (error) {
+        console.error("Failed to save article:", error)
+        return { error: "Failed to save article" }
+    }
+}
+
+export async function removeSavedArticle(link: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        await prisma.savedArticle.deleteMany({
+            where: {
+                userId: session.user.id,
+                link: link
+            }
+        })
+
+        revalidatePath("/news")
+        return { success: true }
+    } catch (error) {
+        console.error("Failed to remove saved article:", error)
+        return { error: "Failed to remove saved article" }
+    }
+}
+
+export async function getSavedArticles() {
+    const session = await auth()
+    if (!session?.user?.id) return []
+
+    return await prisma.savedArticle.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" }
+    })
+}
+

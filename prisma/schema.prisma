@@ -29,6 +29,7 @@ model User {
   contacts    Contact[]
   groups      Group[]
   connections Connection[]
+  savedArticles SavedArticle[]
 }
 
 model Journal {
@@ -169,6 +170,7 @@ model AppConfig {
   id                  String  @id @default(cuid())
   redirectHomeToLogin Boolean @default(false)
   enableBlogging      Boolean @default(false)
+  enableNewsFeed      Boolean @default(false)
   
   // Auto Backup Settings
   enableAutoBackup    Boolean @default(false)
@@ -181,12 +183,39 @@ model AppConfig {
   analyticSnippet   String?  @default("")
 
   // UI Settings (dynamic theme config)
-  themeFont           String  @default("inter")
-  themeBlogFont       String  @default("inter")
+  themeFont           String  @default("prompt")
+  themeBlogFont       String  @default("prompt")
   themeBlogSize       String  @default("medium")
   themeCodeFont       String  @default("geist")
   themeAccent         String  @default("sage")
   themeCustomAccent   String  @default("#768882")
   themeBg             String  @default("white")
   themeCustomBg       String  @default("#ffffff")
+}
+
+model RssFeed {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  category  String?  @default("General")
+  icon      String?
+  userId    String?  // null if global/system default feed, or userId for custom feed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SavedArticle {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  link        String
+  content     String?
+  excerpt     String?
+  imageUrl    String?
+  sourceTitle String?
+  pubDate     DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, link])
 }

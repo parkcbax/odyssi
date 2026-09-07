@@ -81,8 +81,8 @@ export default async function RootLayout({
     <html 
       lang="en" 
       className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${kanit.variable} ${prompt.variable} ${roboto.variable} ${lora.variable}`} 
-      data-font={config?.themeFont || "inter"}
-      data-blog-font={config?.themeBlogFont || "inter"}
+      data-font={config?.themeFont || "prompt"}
+      data-blog-font={config?.themeBlogFont || "prompt"}
       data-blog-size={config?.themeBlogSize || "medium"}
       data-code-font={config?.themeCodeFont || "geist"}
       data-accent={config?.themeAccent || "sage"}

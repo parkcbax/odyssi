@@ -39,8 +39,8 @@ export function UISettingsForm({ enableBlogging, appConfig }: UISettingsFormProp
     const router = useRouter()
 
     const { theme, setTheme } = useTheme()
-    const [font, setFont] = useState(appConfig?.themeFont || "inter")
-    const [blogFont, setBlogFont] = useState(appConfig?.themeBlogFont || "inter")
+    const [font, setFont] = useState(appConfig?.themeFont || "prompt")
+    const [blogFont, setBlogFont] = useState(appConfig?.themeBlogFont || "prompt")
     const [blogSize, setBlogSize] = useState(appConfig?.themeBlogSize || "medium")
     const [codeFont, setCodeFont] = useState(appConfig?.themeCodeFont || "geist")
     const [accent, setAccent] = useState(appConfig?.themeAccent || "sage")

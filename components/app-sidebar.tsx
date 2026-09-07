@@ -10,7 +10,8 @@ import {
     LogOut,
     Plus,
     Archive,
-    Search
+    Search,
+    Newspaper
 } from "lucide-react"
 
 import {
@@ -71,6 +72,7 @@ import { Users } from "lucide-react"
 
 interface AppSidebarProps {
     enableBlogging?: boolean
+    enableNewsFeed?: boolean
     isAdmin?: boolean
     enableMultiUser?: boolean
     enableUserBlogging?: boolean
@@ -78,10 +80,19 @@ interface AppSidebarProps {
 
 import { handleSignOut } from "@/app/lib/actions"
 
-export function AppSidebar({ enableBlogging, isAdmin, enableMultiUser, enableUserBlogging }: AppSidebarProps) {
+export function AppSidebar({ enableBlogging, enableNewsFeed, isAdmin, enableMultiUser, enableUserBlogging }: AppSidebarProps) {
     const pathname = usePathname()
 
     const navItems = [...items]
+
+    if (enableNewsFeed) {
+        navItems.push({
+            title: "News",
+            url: "/news",
+            icon: Newspaper,
+        })
+    }
+
     // Show Blog if enabled globally AND (user is admin OR user blogging is enabled)
     // Note: If isAdmin is undefined (e.g. loading), we default to false for security, 
     // but typically layout passes correct value.
