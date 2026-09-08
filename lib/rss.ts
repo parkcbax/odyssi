@@ -112,7 +112,7 @@ export function sanitizeArticleContent(rawHtml: string): string {
         ],
         allowedAttributes: {
             a: ['href', 'name', 'target', 'rel'],
-            img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
+            img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'referrerpolicy'],
             '*': ['class']
         },
         allowedSchemes: ['http', 'https'],
@@ -125,14 +125,22 @@ export function sanitizeArticleContent(rawHtml: string): string {
                     rel: 'noopener noreferrer'
                 }
             }),
-            img: (tagName, attribs) => ({
-                tagName: 'img',
-                attribs: {
-                    ...attribs,
-                    loading: 'lazy',
-                    class: 'rounded-lg max-h-96 w-auto object-cover my-4'
+            img: (tagName, attribs) => {
+                let src = attribs.src || ''
+                if (src && (src.startsWith('http://') || src.startsWith('https://'))) {
+                    src = `/api/proxy/image?url=${encodeURIComponent(src)}`
                 }
-            })
+                return {
+                    tagName: 'img',
+                    attribs: {
+                        ...attribs,
+                        src,
+                        loading: 'lazy',
+                        referrerpolicy: 'no-referrer',
+                        class: 'rounded-lg max-h-96 w-auto object-cover my-4'
+                    }
+                }
+            }
         }
     })
 }
@@ -152,17 +160,40 @@ const parser = new Parser({
             ['media:thumbnail', 'media:thumbnail'],
             ['content:encoded', 'content:encoded'],
         ]
-    },
-    timeout: 8000
+    }
 })
 
-export async function fetchFeed(url: string, feedTitle?: string, feedCategory?: string): Promise<RssArticle[]> {
+export async function fetchFeed(url: string, feedTitle?: string, feedCategory?: string, customTimeoutMs: number = 360000): Promise<RssArticle[]> {
     if (!isValidPublicHttpUrl(url)) {
         throw new Error("Invalid or prohibited feed URL")
     }
 
     try {
-        const feed = await parser.parseURL(url)
+        // Use native fetch with extended timeout (default 6 minutes) for slow LLM/webhook feeds
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), customTimeoutMs)
+
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OdyssiFeedReader/1.0",
+                "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8"
+            }
+        })
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+            console.error(`Feed fetch HTTP error ${response.status} from ${url}`)
+            return []
+        }
+
+        const xmlText = await response.text()
+        if (!xmlText || xmlText.trim().length === 0) {
+            console.warn(`Empty feed response from ${url}`)
+            return []
+        }
+
+        const feed = await parser.parseString(xmlText)
         const sourceName = feedTitle || feed.title || new URL(url).hostname
         const categoryName = feedCategory || "General"
 
@@ -189,8 +220,13 @@ export async function fetchFeed(url: string, feedTitle?: string, feedCategory?: 
                 author: item.creator || (item as any).author
             }
         })
-    } catch (error) {
-        console.error(`Failed to fetch RSS from ${url}:`, error)
+    } catch (error: any) {
+        if (error?.name === "AbortError") {
+            console.error(`Feed fetch timeout (${customTimeoutMs / 1000}s) exceeded for ${url}`)
+        } else {
+            console.error(`Failed to fetch RSS from ${url}:`, error?.message || error)
+        }
         return []
     }
 }
+

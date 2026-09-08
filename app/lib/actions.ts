@@ -5,8 +5,12 @@ import { AuthError } from "next-auth"
 import { redirect } from "next/navigation"
 import { getExcerpt } from "@/app/lib/blog-utils"
 import { isAdmin } from "@/lib/auth-utils"
-import bcrypt from "bcryptjs"
 import { DEFAULT_FEEDS, fetchFeed, isValidPublicHttpUrl, RssArticle } from "@/lib/rss"
+import { syncAllFeeds } from "@/lib/rss-sync"
+import { extractFullArticleContent } from "@/lib/article-extractor"
+import bcrypt from "bcryptjs"
+
+
 
 export async function authenticate(
     prevState: string | undefined,
@@ -957,6 +961,7 @@ export async function addNewsFeed(formData: FormData) {
     const title = (formData.get("title") as string)?.trim()
     const url = (formData.get("url") as string)?.trim()
     const category = (formData.get("category") as string)?.trim() || "General"
+    const fetchInterval = (formData.get("fetchInterval") as string)?.trim() || "15M"
 
     if (!title || !url) {
         return { error: "Title and RSS Feed URL are required" }
@@ -968,20 +973,18 @@ export async function addNewsFeed(formData: FormData) {
     }
 
     try {
-        // Quick verification parse test
-        const testArticles = await fetchFeed(url, title)
-        if (testArticles.length === 0) {
-            // Still allow if feed exists, but inform user if empty
-        }
-
         await prisma.rssFeed.create({
             data: {
                 title,
                 url,
                 category,
+                fetchInterval,
                 userId: session.user.id
             }
         })
+
+        // Trigger background sync for this new feed immediately without blocking
+        syncAllFeeds(true).catch(err => console.error("Post-add background sync failed:", err))
 
         revalidatePath("/news")
         return { success: true }
@@ -990,6 +993,63 @@ export async function addNewsFeed(formData: FormData) {
         return { error: error?.message || "Failed to add RSS feed" }
     }
 }
+
+export async function updateNewsFeed(formData: FormData) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    const isUserAdmin = isAdmin(session?.user?.email)
+    const feedId = (formData.get("id") as string)?.trim()
+    const title = (formData.get("title") as string)?.trim()
+    const url = (formData.get("url") as string)?.trim()
+    const category = (formData.get("category") as string)?.trim() || "General"
+    const fetchInterval = (formData.get("fetchInterval") as string)?.trim() || "15M"
+
+    if (!feedId || !title || !url) {
+        return { error: "Feed ID, Title, and RSS Feed URL are required" }
+    }
+
+    if (!isValidPublicHttpUrl(url)) {
+        return { error: "Invalid URL or prohibited network address" }
+    }
+
+    try {
+        const feed = await prisma.rssFeed.findUnique({
+            where: { id: feedId }
+        })
+
+        if (!feed) return { error: "Feed not found" }
+
+        // User can edit their own feed, or admin can edit system feed
+        if (feed.userId !== session.user.id && !isUserAdmin) {
+            return { error: "Unauthorized to update this feed" }
+        }
+
+        const urlChanged = feed.url !== url
+
+        await prisma.rssFeed.update({
+            where: { id: feedId },
+            data: {
+                title,
+                url,
+                category,
+                fetchInterval
+            }
+        })
+
+        // If URL changed, sync immediately
+        if (urlChanged) {
+            syncAllFeeds(true).catch(err => console.error("Post-edit background sync failed:", err))
+        }
+
+        revalidatePath("/news")
+        return { success: true }
+    } catch (error: any) {
+        console.error("Failed to update RSS feed:", error)
+        return { error: error?.message || "Failed to update RSS feed" }
+    }
+}
+
 
 export async function deleteNewsFeed(feedId: string) {
     const session = await auth()
@@ -1021,32 +1081,116 @@ export async function deleteNewsFeed(feedId: string) {
     }
 }
 
+export async function fetchFullArticleAction(url: string) {
+
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    if (!isValidPublicHttpUrl(url)) {
+        return { error: "Invalid URL" }
+    }
+
+    try {
+        const result = await extractFullArticleContent(url)
+        if (result.error || !result.content) {
+            return { error: result.error || "Could not extract full article" }
+        }
+
+        // Cache full content in FeedArticleCache if exists
+        try {
+            await prisma.feedArticleCache.updateMany({
+                where: { link: url },
+                data: { content: result.content }
+            })
+        } catch {
+            // Non-critical if not found in cache
+        }
+
+        return { success: true, content: result.content }
+    } catch (error: any) {
+        console.error("fetchFullArticleAction error:", error)
+        return { error: error?.message || "Failed to load full article" }
+    }
+}
+
+export async function syncNewsFeedsAction() {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    // Start background sync job (supports up to 6 minutes for LLM feeds)
+    syncAllFeeds()
+        .then(() => {
+            revalidatePath("/news")
+        })
+        .catch((error: any) => {
+            console.error("Background sync error:", error)
+        })
+
+    return {
+        success: true,
+        background: true,
+        message: "Syncing news feeds in background (long feeds may take a few minutes)..."
+    }
+}
+
+
 export async function fetchAllFeedArticles(): Promise<RssArticle[]> {
     const session = await auth()
     if (!session?.user?.id) return []
 
+    // 1. First retrieve all active feeds for user
     const feeds = await getNewsFeeds()
+    if (feeds.length === 0) return []
 
-    const results = await Promise.allSettled(
-        feeds.map(feed => fetchFeed(feed.url, feed.title, feed.category || "General"))
-    )
+    const feedUrls = feeds.map(f => f.url)
 
-    const allArticles: RssArticle[] = []
-    for (const res of results) {
-        if (res.status === "fulfilled") {
-            allArticles.push(...res.value)
-        }
-    }
-
-    // Sort newest first
-    allArticles.sort((a, b) => {
-        const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0
-        const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0
-        return dateB - dateA
+    // 2. Fast query from FeedArticleCache
+    const cached = await prisma.feedArticleCache.findMany({
+        where: {
+            sourceUrl: { in: feedUrls }
+        },
+        orderBy: { pubDate: "desc" },
+        take: 300
     })
 
-    return allArticles
+    // If cache is completely empty, perform an immediate initial sync in background
+    if (cached.length === 0) {
+        // Run sync in background or immediately
+        syncAllFeeds().catch(err => console.error("Initial background sync failed:", err))
+
+        // Do a fast real-time fallback fetch
+        const results = await Promise.allSettled(
+            feeds.map(feed => fetchFeed(feed.url, feed.title, feed.category || "General"))
+        )
+        const fallbackArticles: RssArticle[] = []
+        for (const res of results) {
+            if (res.status === "fulfilled") {
+                fallbackArticles.push(...res.value)
+            }
+        }
+        fallbackArticles.sort((a, b) => {
+            const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0
+            const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0
+            return dateB - dateA
+        })
+        return fallbackArticles
+    }
+
+    return cached.map(item => ({
+        id: Buffer.from(item.link).toString('base64url').substring(0, 32),
+        title: item.title,
+        link: item.link,
+        content: item.content || item.excerpt || "",
+        excerpt: item.excerpt || "",
+        imageUrl: item.imageUrl || undefined,
+        sourceTitle: item.sourceTitle || "",
+        sourceUrl: item.sourceUrl,
+        category: item.category || "General",
+        pubDate: item.pubDate ? item.pubDate.toISOString() : undefined,
+        author: item.author || undefined
+    }))
 }
+
 
 export async function saveArticle(article: {
     title: string

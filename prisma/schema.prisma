@@ -194,15 +194,18 @@ model AppConfig {
 }
 
 model RssFeed {
-  id        String   @id @default(cuid())
-  title     String
-  url       String
-  category  String?  @default("General")
-  icon      String?
-  userId    String?  // null if global/system default feed, or userId for custom feed
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  title         String
+  url           String
+  category      String?   @default("General")
+  icon          String?
+  fetchInterval String    @default("15M") // 15M, 1H, 6H, 12H, 1D
+  lastFetchedAt DateTime?
+  userId        String?  // null if global/system default feed, or userId for custom feed
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
+
 
 model SavedArticle {
   id          String   @id @default(cuid())
@@ -219,3 +222,24 @@ model SavedArticle {
 
   @@unique([userId, link])
 }
+
+model FeedArticleCache {
+  id          String    @id @default(cuid())
+  link        String    @unique
+  title       String
+  content     String?
+  excerpt     String?
+  imageUrl    String?
+  sourceTitle String?
+  sourceUrl   String
+  category    String?   @default("General")
+  pubDate     DateTime?
+  author      String?
+  feedId      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([sourceUrl])
+  @@index([pubDate])
+}
+

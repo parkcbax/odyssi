@@ -16,7 +16,8 @@ import {
     Filter,
     Clock,
     X,
-    FolderPlus
+    FolderPlus,
+    Edit3
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,6 +34,13 @@ import {
     DialogFooter
 } from "@/components/ui/dialog"
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import {
     Sheet,
     SheetContent,
     SheetHeader,
@@ -40,7 +48,7 @@ import {
     SheetDescription
 } from "@/components/ui/sheet"
 import { toast } from "sonner"
-import { addNewsFeed, deleteNewsFeed, saveArticle, removeSavedArticle } from "@/app/lib/actions"
+import { addNewsFeed, updateNewsFeed, deleteNewsFeed, saveArticle, removeSavedArticle, syncNewsFeedsAction, fetchFullArticleAction } from "@/app/lib/actions"
 import { RssArticle } from "@/lib/rss"
 import { useRouter } from "next/navigation"
 
@@ -49,8 +57,11 @@ interface FeedSource {
     title: string
     url: string
     category: string | null
+    fetchInterval?: string | null
+    lastFetchedAt?: Date | string | null
     userId: string | null
 }
+
 
 interface SavedArticleItem {
     id: string
@@ -60,8 +71,7 @@ interface SavedArticleItem {
     excerpt: string | null
     imageUrl: string | null
     sourceTitle: string | null
-    pubDate: Date | string | null
-    createdAt: Date | string
+    pubDate: string | Date | null
 }
 
 interface NewsClientProps {
@@ -70,6 +80,15 @@ interface NewsClientProps {
     initialSavedArticles: SavedArticleItem[]
     currentUserId: string
     isAdmin: boolean
+}
+
+function getImageProxyUrl(url: string | null | undefined): string | undefined {
+    if (!url) return undefined
+    if (url.startsWith('/api/proxy/image')) return url
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return `/api/proxy/image?url=${encodeURIComponent(url)}`
+    }
+    return url
 }
 
 export function NewsClient({
@@ -83,9 +102,9 @@ export function NewsClient({
     const [isPending, startTransition] = useTransition()
     const [isFiltering, startFilterTransition] = useTransition()
 
+    const [feeds, setFeeds] = useState<FeedSource[]>(initialFeeds)
     const [articles, setArticles] = useState<RssArticle[]>(initialArticles)
     const [savedArticles, setSavedArticles] = useState<SavedArticleItem[]>(initialSavedArticles)
-    const [feeds, setFeeds] = useState<FeedSource[]>(initialFeeds)
 
     // Sync state when server props update (e.g. after router.refresh() or feed addition)
     useEffect(() => {
@@ -104,13 +123,136 @@ export function NewsClient({
     const [selectedCategory, setSelectedCategory] = useState<string>("all")
     const [searchQuery, setSearchQuery] = useState<string>("")
     const [readingArticle, setReadingArticle] = useState<RssArticle | SavedArticleItem | null>(null)
+    const [isLoadingFullArticle, setIsLoadingFullArticle] = useState<boolean>(false)
 
-    // Feed Source Dialog state
+    // Handler to fetch full article content when only excerpt is present
+    const handleFetchFullArticle = async (article: RssArticle | SavedArticleItem) => {
+        if (!article.link) return
+        setIsLoadingFullArticle(true)
+        try {
+            const res = await fetchFullArticleAction(article.link)
+            if (res.success && res.content) {
+                // Update readingArticle with full content
+                setReadingArticle(prev => prev ? { ...prev, content: res.content } : null)
+                // Also update in articles state so reopening has full content
+                setArticles(prev => prev.map(a => a.link === article.link ? { ...a, content: res.content } : a))
+                toast.success("Loaded full article text")
+            } else {
+                toast.error(res.error || "Could not extract full content from website")
+            }
+        } catch {
+            toast.error("Failed to fetch full article")
+        } finally {
+            setIsLoadingFullArticle(false)
+        }
+    }
+
+
+    // Feed Source Dialog state (Add & Edit)
     const [isAddFeedOpen, setIsAddFeedOpen] = useState(false)
+    const [editingFeed, setEditingFeed] = useState<FeedSource | null>(null)
     const [newFeedTitle, setNewFeedTitle] = useState("")
     const [newFeedUrl, setNewFeedUrl] = useState("")
     const [newFeedCategory, setNewFeedCategory] = useState("General")
+    const [newFeedInterval, setNewFeedInterval] = useState("15M")
     const [feedError, setFeedError] = useState("")
+
+    const openAddFeedModal = () => {
+        setEditingFeed(null)
+        setNewFeedTitle("")
+        setNewFeedUrl("")
+        setNewFeedCategory("General")
+        setNewFeedInterval("15M")
+        setFeedError("")
+        setIsAddFeedOpen(true)
+    }
+
+    const openEditFeedModal = (feed: FeedSource) => {
+        setEditingFeed(feed)
+        setNewFeedTitle(feed.title)
+        setNewFeedUrl(feed.url)
+        setNewFeedCategory(feed.category || "General")
+        setNewFeedInterval(feed.fetchInterval || "15M")
+        setFeedError("")
+        setIsAddFeedOpen(true)
+    }
+
+    const handleSaveFeed = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setFeedError("")
+
+        if (!newFeedTitle.trim() || !newFeedUrl.trim()) {
+            setFeedError("Please enter both feed title and URL")
+            return
+        }
+
+        const formData = new FormData()
+        if (editingFeed) {
+            formData.append("id", editingFeed.id)
+        }
+        formData.append("title", newFeedTitle.trim())
+        formData.append("url", newFeedUrl.trim())
+        formData.append("category", newFeedCategory.trim())
+        formData.append("fetchInterval", newFeedInterval)
+
+        startTransition(async () => {
+            const res = editingFeed
+                ? await updateNewsFeed(formData)
+                : await addNewsFeed(formData)
+
+            if (res.error) {
+                setFeedError(res.error)
+                toast.error(res.error)
+            } else {
+                toast.success(editingFeed ? "Feed updated successfully!" : "Feed added successfully!")
+                setIsAddFeedOpen(false)
+                setEditingFeed(null)
+                setNewFeedTitle("")
+                setNewFeedUrl("")
+                setNewFeedCategory("General")
+                setNewFeedInterval("15M")
+                router.refresh()
+            }
+        })
+    }
+
+
+    const handleDeleteFeed = async (feedId: string) => {
+        if (!confirm("Are you sure you want to remove this RSS feed?")) return
+
+        const feedToDelete = feeds.find(f => f.id === feedId)
+
+        // Optimistic feed and articles removal
+        setFeeds(prev => prev.filter(f => f.id !== feedId))
+        if (feedToDelete) {
+            setArticles(prev => prev.filter(a => a.sourceUrl !== feedToDelete.url && a.sourceTitle !== feedToDelete.title))
+        }
+
+        startTransition(async () => {
+            const res = await deleteNewsFeed(feedId)
+            if (res.error) {
+                toast.error(res.error)
+                router.refresh()
+            } else {
+                toast.success("Feed deleted")
+                router.refresh()
+            }
+        })
+    }
+
+    const handleRefresh = () => {
+        startTransition(async () => {
+            const res = await syncNewsFeedsAction()
+            if (res?.error) {
+                toast.error(res.error)
+            } else {
+                toast.info("RSS sync started in background. Feeds taking up to 5 minutes will update automatically.")
+            }
+            router.refresh()
+        })
+    }
+
+
 
     // Extract unique categories from currently active feeds
     const categories = Array.from(
@@ -157,8 +299,7 @@ export function NewsClient({
                 excerpt: article.excerpt || null,
                 imageUrl: article.imageUrl || null,
                 sourceTitle: article.sourceTitle || null,
-                pubDate: article.pubDate || null,
-                createdAt: new Date().toISOString()
+                pubDate: article.pubDate || null
             }
             setSavedArticles(prev => [newSaved, ...prev])
 
@@ -181,67 +322,8 @@ export function NewsClient({
         }
     }
 
-    const handleAddFeed = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setFeedError("")
-
-        if (!newFeedTitle.trim() || !newFeedUrl.trim()) {
-            setFeedError("Please enter both feed title and URL")
-            return
-        }
-
-        const formData = new FormData()
-        formData.append("title", newFeedTitle.trim())
-        formData.append("url", newFeedUrl.trim())
-        formData.append("category", newFeedCategory.trim())
-
-        startTransition(async () => {
-            const res = await addNewsFeed(formData)
-            if (res.error) {
-                setFeedError(res.error)
-                toast.error(res.error)
-            } else {
-                toast.success("Feed added successfully!")
-                setIsAddFeedOpen(false)
-                setNewFeedTitle("")
-                setNewFeedUrl("")
-                setNewFeedCategory("General")
-                router.refresh()
-            }
-        })
-    }
-
-    const handleDeleteFeed = async (feedId: string) => {
-        if (!confirm("Are you sure you want to remove this RSS feed?")) return
-
-        const feedToDelete = feeds.find(f => f.id === feedId)
-
-        // Optimistic feed and articles removal
-        setFeeds(prev => prev.filter(f => f.id !== feedId))
-        if (feedToDelete) {
-            setArticles(prev => prev.filter(a => a.sourceUrl !== feedToDelete.url && a.sourceTitle !== feedToDelete.title))
-        }
-
-        startTransition(async () => {
-            const res = await deleteNewsFeed(feedId)
-            if (res.error) {
-                toast.error(res.error)
-                router.refresh()
-            } else {
-                toast.success("Feed deleted")
-                router.refresh()
-            }
-        })
-    }
-
-    const handleRefresh = () => {
-        startTransition(() => {
-            router.refresh()
-            toast.info("Refreshed news feeds")
-        })
-    }
-
     // Filter articles
+
     const filteredArticles = articles.filter(art => {
         // 1. Must belong to currently active feed
         const isFromActiveFeed = feeds.some(f => 
@@ -312,7 +394,7 @@ export function NewsClient({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         size="sm"
@@ -324,21 +406,22 @@ export function NewsClient({
                         Refresh
                     </Button>
 
+                    <Button size="sm" onClick={openAddFeedModal} className="gap-1.5">
+                        <Plus className="h-4 w-4" />
+                        Add Feed Source
+                    </Button>
+
                     <Dialog open={isAddFeedOpen} onOpenChange={setIsAddFeedOpen}>
-                        <DialogTrigger asChild>
-                            <Button size="sm" className="gap-1.5">
-                                <Plus className="h-4 w-4" />
-                                Add Feed Source
-                            </Button>
-                        </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Add RSS Feed Source</DialogTitle>
+                                <DialogTitle>{editingFeed ? "Edit RSS Feed" : "Add RSS Feed Source"}</DialogTitle>
                                 <DialogDescription>
-                                    Add an RSS or Atom feed link. Only public HTTP/HTTPS URLs are supported.
+                                    {editingFeed
+                                        ? "Update feed settings and sync schedule."
+                                        : "Add an RSS or Atom feed link. Only public HTTP/HTTPS URLs are supported."}
                                 </DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleAddFeed} className="space-y-4 py-2">
+                            <form onSubmit={handleSaveFeed} className="space-y-4 py-2">
                                 {feedError && (
                                     <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-lg">
                                         {feedError}
@@ -362,13 +445,33 @@ export function NewsClient({
                                         required
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium">Category</label>
-                                    <Input
-                                        placeholder="Tech, Business, Science, etc."
-                                        value={newFeedCategory}
-                                        onChange={e => setNewFeedCategory(e.target.value)}
-                                    />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium">Category</label>
+                                        <Input
+                                            placeholder="Tech, Business, etc."
+                                            value={newFeedCategory}
+                                            onChange={e => setNewFeedCategory(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium">Sync Interval</label>
+                                        <Select
+                                            value={newFeedInterval}
+                                            onValueChange={setNewFeedInterval}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select interval" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="15M">Every 15 Minutes</SelectItem>
+                                                <SelectItem value="1H">Every 1 Hour</SelectItem>
+                                                <SelectItem value="6H">Every 6 Hours</SelectItem>
+                                                <SelectItem value="12H">Every 12 Hours</SelectItem>
+                                                <SelectItem value="1D">Every 1 Day</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                                 <DialogFooter>
                                     <Button
@@ -379,7 +482,7 @@ export function NewsClient({
                                         Cancel
                                     </Button>
                                     <Button type="submit" disabled={isPending}>
-                                        {isPending ? "Adding..." : "Add Feed"}
+                                        {isPending ? "Saving..." : editingFeed ? "Save Changes" : "Add Feed"}
                                     </Button>
                                 </DialogFooter>
                             </form>
@@ -558,8 +661,9 @@ export function NewsClient({
                                             {article.imageUrl ? (
                                                 <div className="relative aspect-video w-full overflow-hidden bg-muted">
                                                     <img
-                                                        src={article.imageUrl}
+                                                        src={getImageProxyUrl(article.imageUrl)}
                                                         alt={article.title}
+                                                        referrerPolicy="no-referrer"
                                                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                                                         loading="lazy"
                                                         onError={e => {
@@ -665,8 +769,9 @@ export function NewsClient({
                                         {article.imageUrl ? (
                                             <div className="relative aspect-video w-full overflow-hidden bg-muted">
                                                 <img
-                                                    src={article.imageUrl}
+                                                    src={getImageProxyUrl(article.imageUrl)}
                                                     alt={article.title}
+                                                    referrerPolicy="no-referrer"
                                                     className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                                                     loading="lazy"
                                                     onError={e => {
@@ -748,9 +853,10 @@ export function NewsClient({
                                         Customize the websites and news channels you subscribe to.
                                     </p>
                                 </div>
-                                <Button size="sm" onClick={() => setIsAddFeedOpen(true)} className="gap-1.5">
+                                <Button size="sm" onClick={openAddFeedModal} className="gap-1.5">
                                     <Plus className="h-4 w-4" /> Add Source
                                 </Button>
+
                             </div>
 
                             <div className="divide-y">
@@ -761,11 +867,17 @@ export function NewsClient({
                                     return (
                                         <div key={feed.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <div className="space-y-1">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="font-medium text-foreground">{feed.title}</span>
                                                     {feed.category && (
                                                         <Badge variant="outline" className="text-xs">
                                                             {feed.category}
+                                                        </Badge>
+                                                    )}
+                                                    {feed.fetchInterval && (
+                                                        <Badge variant="secondary" className="text-[10px] gap-1 font-mono">
+                                                            <Clock className="h-2.5 w-2.5" />
+                                                            {feed.fetchInterval}
                                                         </Badge>
                                                     )}
                                                     {feed.userId === null ? (
@@ -784,21 +896,34 @@ export function NewsClient({
                                             </div>
 
                                             {canDelete && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-destructive hover:bg-destructive/10 shrink-0 self-start sm:self-auto gap-1"
-                                                    onClick={() => handleDeleteFeed(feed.id)}
-                                                    disabled={isPending}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                    Remove
-                                                </Button>
+                                                <div className="flex items-center gap-1 shrink-0 self-start sm:self-auto">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="hover:bg-accent gap-1 text-xs"
+                                                        onClick={() => openEditFeedModal(feed)}
+                                                        disabled={isPending}
+                                                    >
+                                                        <Edit3 className="h-3.5 w-3.5" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:bg-destructive/10 gap-1 text-xs"
+                                                        onClick={() => handleDeleteFeed(feed.id)}
+                                                        disabled={isPending}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        Remove
+                                                    </Button>
+                                                </div>
                                             )}
                                         </div>
                                     )
                                 })}
                             </div>
+
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -835,8 +960,9 @@ export function NewsClient({
                                 {readingArticle.imageUrl && (
                                     <div className="rounded-xl overflow-hidden bg-muted border">
                                         <img
-                                            src={readingArticle.imageUrl}
+                                            src={getImageProxyUrl(readingArticle.imageUrl)}
                                             alt={readingArticle.title}
+                                            referrerPolicy="no-referrer"
                                             className="w-full max-h-80 object-cover"
                                             onError={e => {
                                                 (e.target as HTMLElement).style.display = "none"
@@ -852,7 +978,35 @@ export function NewsClient({
                                         __html: readingArticle.content || readingArticle.excerpt || ""
                                     }}
                                 />
+
+                                {/* Option to fetch and display full article body */}
+                                <div className="p-4 rounded-xl border bg-muted/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left mt-6">
+                                    <div className="space-y-0.5">
+                                        <p className="text-sm font-medium text-foreground">Read full article in Odyssi</p>
+                                        <p className="text-xs text-muted-foreground">Fetch and parse original article content directly from website.</p>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => handleFetchFullArticle(readingArticle)}
+                                        disabled={isLoadingFullArticle}
+                                        className="shrink-0 gap-1.5"
+                                    >
+                                        {isLoadingFullArticle ? (
+                                            <>
+                                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                                Loading Full Article...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Globe className="h-3.5 w-3.5" />
+                                                Load Full Article
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
+
 
                             <div className="p-4 border-t bg-muted/30 flex items-center justify-between shrink-0">
                                 <Button

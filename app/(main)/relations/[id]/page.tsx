@@ -187,7 +187,10 @@ function ConnectionCard({ targetName, targetId, type, isSource, currentContactId
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <form action={swapConnection}>
+                    <form action={async (formData) => {
+                        "use server"
+                        await swapConnection(formData)
+                    }}>
                         <input type="hidden" name="sourceContactId" value={sourceId} />
                         <input type="hidden" name="targetContactId" value={destId} />
                         <Button 
@@ -199,7 +202,10 @@ function ConnectionCard({ targetName, targetId, type, isSource, currentContactId
                             <RefreshCw className="h-4 w-4" />
                         </Button>
                     </form>
-                    <form action={deleteConnection}>
+                    <form action={async (formData) => {
+                        "use server"
+                        await deleteConnection(formData)
+                    }}>
                         <input type="hidden" name="sourceContactId" value={sourceId} />
                         <input type="hidden" name="targetContactId" value={destId} />
                         <Button 

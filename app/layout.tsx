@@ -54,6 +54,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/assets/odyssi_logo.png",
   },
+  referrer: "no-referrer",
 };
 
 
@@ -69,12 +70,12 @@ export default async function RootLayout({
 }>) {
   const config = await getAppConfig();
 
-  const htmlStyles: React.CSSProperties = {};
+  const htmlStyles: React.CSSProperties & Record<string, string> = {};
   if (config?.themeAccent === "custom") {
-    htmlStyles["--custom-primary" as any] = config?.themeCustomAccent || "#768882";
+    htmlStyles["--custom-primary"] = config?.themeCustomAccent || "#768882";
   }
   if (config?.themeBg === "custom") {
-    htmlStyles["--custom-background" as any] = config?.themeCustomBg || "#ffffff";
+    htmlStyles["--custom-background"] = config?.themeCustomBg || "#ffffff";
   }
 
   return (

@@ -61,7 +61,7 @@ export function EntryViewer({ content, locationLat, locationLng, locationName }:
                 HTMLAttributes: {
                     class: 'mention font-medium text-primary hover:underline',
                 },
-                renderHTML({ node, HTMLAttributes }) {
+                renderHTML({ node, HTMLAttributes }: any) {
                     return [
                         'a',
                         {
