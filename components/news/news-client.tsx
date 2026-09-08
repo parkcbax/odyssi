@@ -322,8 +322,8 @@ export function NewsClient({
         }
     }
 
-    // Filter articles
-
+    // Filter and deduplicate articles
+    const seenFilterKeys = new Set<string>()
     const filteredArticles = articles.filter(art => {
         // 1. Must belong to currently active feed
         const isFromActiveFeed = feeds.some(f => 
@@ -349,7 +349,14 @@ export function NewsClient({
             art.excerpt.toLowerCase().includes(q) ||
             artSource.includes(q)
 
-        return matchesFeed && matchesCategory && matchesQuery
+        if (!(matchesFeed && matchesCategory && matchesQuery)) return false
+
+        // 5. In-client deduplication safeguard
+        const key = (art.link?.trim().toLowerCase() || "") || (art.title?.trim().toLowerCase() || "")
+        if (key && seenFilterKeys.has(key)) return false
+        if (key) seenFilterKeys.add(key)
+
+        return true
     })
 
     const filteredSaved = savedArticles.filter(art => {

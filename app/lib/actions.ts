@@ -951,7 +951,15 @@ export async function getNewsFeeds() {
         }
     }
 
-    return feeds
+    // Deduplicate feeds by URL
+    const uniqueFeedsMap = new Map<string, typeof feeds[0]>()
+    for (const feed of feeds) {
+        if (!uniqueFeedsMap.has(feed.url)) {
+            uniqueFeedsMap.set(feed.url, feed)
+        }
+    }
+
+    return Array.from(uniqueFeedsMap.values())
 }
 
 export async function addNewsFeed(formData: FormData) {
@@ -970,6 +978,20 @@ export async function addNewsFeed(formData: FormData) {
     // SSRF & protocol validation
     if (!isValidPublicHttpUrl(url)) {
         return { error: "Invalid URL or prohibited network address. Only public HTTP/HTTPS URLs are allowed." }
+    }
+
+    // Check if feed URL already exists for this user or as default
+    const existing = await prisma.rssFeed.findFirst({
+        where: {
+            url,
+            OR: [
+                { userId: null },
+                { userId: session.user.id }
+            ]
+        }
+    })
+    if (existing) {
+        return { error: "This RSS feed URL is already added." }
     }
 
     try {
@@ -1163,9 +1185,19 @@ export async function fetchAllFeedArticles(): Promise<RssArticle[]> {
             feeds.map(feed => fetchFeed(feed.url, feed.title, feed.category || "General"))
         )
         const fallbackArticles: RssArticle[] = []
+        const seenLinks = new Set<string>()
+
         for (const res of results) {
             if (res.status === "fulfilled") {
-                fallbackArticles.push(...res.value)
+                for (const item of res.value) {
+                    const normLink = item.link?.trim().toLowerCase() || ""
+                    const normTitle = item.title?.trim().toLowerCase() || ""
+                    const key = normLink || normTitle
+                    if (key && !seenLinks.has(key)) {
+                        seenLinks.add(key)
+                        fallbackArticles.push(item)
+                    }
+                }
             }
         }
         fallbackArticles.sort((a, b) => {
@@ -1176,19 +1208,36 @@ export async function fetchAllFeedArticles(): Promise<RssArticle[]> {
         return fallbackArticles
     }
 
-    return cached.map(item => ({
-        id: Buffer.from(item.link).toString('base64url').substring(0, 32),
-        title: item.title,
-        link: item.link,
-        content: item.content || item.excerpt || "",
-        excerpt: item.excerpt || "",
-        imageUrl: item.imageUrl || undefined,
-        sourceTitle: item.sourceTitle || "",
-        sourceUrl: item.sourceUrl,
-        category: item.category || "General",
-        pubDate: item.pubDate ? item.pubDate.toISOString() : undefined,
-        author: item.author || undefined
-    }))
+    // Deduplicate cached articles by link and normalized title
+    const uniqueArticles: RssArticle[] = []
+    const seenArticleKeys = new Set<string>()
+
+    for (const item of cached) {
+        const normLink = item.link?.trim().toLowerCase() || ""
+        const normTitle = item.title?.trim().toLowerCase() || ""
+        const key = normLink || normTitle
+
+        if (key && seenArticleKeys.has(key)) {
+            continue
+        }
+        if (key) seenArticleKeys.add(key)
+
+        uniqueArticles.push({
+            id: Buffer.from(item.link).toString('base64url').substring(0, 32),
+            title: item.title,
+            link: item.link,
+            content: item.content || item.excerpt || "",
+            excerpt: item.excerpt || "",
+            imageUrl: item.imageUrl || undefined,
+            sourceTitle: item.sourceTitle || "",
+            sourceUrl: item.sourceUrl,
+            category: item.category || "General",
+            pubDate: item.pubDate ? item.pubDate.toISOString() : undefined,
+            author: item.author || undefined
+        })
+    }
+
+    return uniqueArticles
 }
 
 
