@@ -62,8 +62,8 @@ export default function EntryMap({ lat, lng, locationName, className }: EntryMap
                     style={{ height: '300px', width: '100%', minHeight: '300px' }}
                 >
                     <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; Esri &copy; OpenStreetMap contributors'
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
                     />
                     <Marker position={position}>
                         <Popup>{locationName || "Location"}</Popup>
