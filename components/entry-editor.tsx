@@ -79,7 +79,8 @@ import {
     Map,
     HelpCircle,
     Palette,
-    ChevronUp
+    ChevronUp,
+    Trash2
 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
@@ -260,9 +261,9 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
         formData.append('journalId', selectedJournalId)
         formData.append('date', date.toISOString())
         if (mood) formData.append('mood', mood)
-        if (locationName) formData.append('locationName', locationName)
-        if (locationLat) formData.append('locationLat', locationLat.toString())
-        if (locationLng) formData.append('locationLng', locationLng.toString())
+        formData.append('locationName', locationName || '')
+        formData.append('locationLat', locationLat?.toString() ?? '')
+        formData.append('locationLng', locationLng?.toString() ?? '')
         if (tags) formData.append('tags', tags)
 
         // Extract mentions
@@ -776,6 +777,22 @@ export function EntryEditor({ journals, initialData }: EntryEditorProps) {
                                             </div>
                                         </TabsContent>
                                     </Tabs>
+
+                                    {(locationName || locationLat || locationLng) && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full mt-4 text-destructive hover:text-destructive"
+                                            onClick={() => {
+                                                setLocationName('')
+                                                setLocationLat(null)
+                                                setLocationLng(null)
+                                            }}
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Remove Location
+                                        </Button>
+                                    )}
                                 </div>
                             </PopoverContent>
                         </Popover>

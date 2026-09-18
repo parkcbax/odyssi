@@ -224,10 +224,17 @@ export async function createEntry(
         return { message: "Invalid fields" }
     }
 
-    const { title, content, journalId, date, mood, locationName, tags, contacts } = validatedFields.data
+    const { title, content, journalId, date, mood, locationName: rawLocationName, tags, contacts } = validatedFields.data
     const tagList = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
     const contactIds = contacts ? contacts.split(',').map(c => c.trim()).filter(Boolean) : []
     const userId = session.user.id
+
+    // Location: treat empty name as "no location" — clear lat/lng too
+    const locationName = rawLocationName?.trim() || null
+    if (!locationName) {
+        validatedFields.data.locationLat = null
+        validatedFields.data.locationLng = null
+    }
 
     console.log("Creating Entry:", { title, journalId, date, mood, locationName, tags: tagList })
 
@@ -303,10 +310,17 @@ export async function updateEntry(
         return { message: "Invalid fields" }
     }
 
-    const { id, title, content, journalId, date, mood, locationName, tags, contacts } = validatedFields.data
+    const { id, title, content, journalId, date, mood, locationName: rawLocationName, tags, contacts } = validatedFields.data
     const tagList = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
     const contactIds = contacts ? contacts.split(',').map(c => c.trim()).filter(Boolean) : []
     const userId = session.user.id
+
+    // Location: treat empty name as "no location" — clear lat/lng too
+    const locationName = rawLocationName?.trim() || null
+    if (!locationName) {
+        validatedFields.data.locationLat = null
+        validatedFields.data.locationLng = null
+    }
 
     try {
         await prisma.entry.update({
