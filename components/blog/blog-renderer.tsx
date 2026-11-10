@@ -6,6 +6,8 @@ import { CustomImage } from '@/components/tiptap/image-extension'
 import { CustomHTML } from '@/components/tiptap/html-extension'
 import LinkExtension from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
+import { TextStyle } from '@tiptap/extension-text-style'
+import { Color } from '@tiptap/extension-color'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
@@ -54,6 +56,8 @@ export function BlogRenderer({ content }: { content: any }) {
             CustomHTML,
             LinkExtension,
             Underline,
+            TextStyle,
+            Color,
             TaskList,
             TaskItem.configure({
                 nested: true,
